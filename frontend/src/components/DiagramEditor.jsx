@@ -1,81 +1,90 @@
+// src/components/DiagramEditor.jsx
 import React, { useRef, useEffect } from 'react';
 import * as go from 'gojs';
 import { setupBPMNDiagram, setupDFDDiagram, setupERDDiagram } from '../utils/diagramTemplates';
 
 function DiagramEditor({ diagramType, modelData, onModelChange }) {
+  const divRef = useRef(null);
   const diagramRef = useRef(null);
 
   useEffect(() => {
-    // Убедимся, что div для диаграммы уже в DOM
-    if (!diagramRef.current) return;
+    if (!divRef.current) return;
 
     const $ = go.GraphObject.make;
 
-    // Инициализируем диаграмму
-    const diagram = $(go.Diagram, diagramRef.current, {
+    // Уничтожаем старую диаграмму, если она была
+    if (diagramRef.current) {
+      diagramRef.current.div = null;
+      diagramRef.current = null;
+    }
+
+    // Создаём новую
+    const diagram = $(go.Diagram, divRef.current, {
       'undoManager.isEnabled': true,
       'grid.visible': true,
       initialContentAlignment: go.Spot.Center,
       allowDrop: true,
     });
 
-    // Настраиваем шаблоны в зависимости от типа диаграммы
-    if (diagramType === 'BPMN') {
-      setupBPMNDiagram(diagram, $);
-    } else if (diagramType === 'DFD') {
-      setupDFDDiagram(diagram, $);
-    } else if (diagramType === 'ERD') {
-      setupERDDiagram(diagram, $);
-    }
-    
-    // Загружаем данные модели
-    diagram.model = go.Model.fromJson(modelData);
+    // Шаблоны
+    if (diagramType === 'BPMN') setupBPMNDiagram(diagram, $);
+    else if (diagramType === 'DFD') setupDFDDiagram(diagram, $);
+    else if (diagramType === 'ERD') setupERDDiagram(diagram, $);
 
-    // Настраиваем Drag-and-Drop
+    // Загружаем модель
+    try {
+      diagram.model = go.Model.fromJson(modelData);
+    } catch (e) {
+      console.warn('Invalid modelData:', e);
+    }
+
+    // Drag & Drop
     const handleDragOver = (e) => e.preventDefault();
     const handleDrop = (e) => {
       e.preventDefault();
-      const data = e.dataTransfer.getData('application/json');
-      if (!data) return;
+      const raw = e.dataTransfer.getData('application/json');
+      if (!raw) return;
 
-      const elementData = JSON.parse(data);
-      // Преобразуем координаты окна в координаты диаграммы
-      const point = diagram.transformViewToDoc(diagram.lastInput.viewPoint);
-      
-      diagram.model.commit(m => {
-        const nodeData = { ...elementData, loc: go.Point.stringify(point) };
-        m.addNodeData(nodeData);
-      });
+      let data;
+      try { data = JSON.parse(raw); } catch { return; }
+
+      const rect = divRef.current.getBoundingClientRect();
+      const pt = diagram.transformViewToDoc(
+        new go.Point(e.clientX - rect.left, e.clientY - rect.top)
+      );
+
+      diagram.startTransaction('add node');
+      diagram.model.addNodeData({ ...data, loc: go.Point.stringify(pt) });
+      diagram.commitTransaction('add node');
     };
-    
-    const canvas = diagramRef.current;
-    canvas.addEventListener('dragover', handleDragOver);
-    canvas.addEventListener('drop', handleDrop);
 
-    // Добавляем слушатель изменений модели для сохранения состояния
-    const modelChangedListener = (e) => {
-      // Сохраняем модель только по завершении транзакции (например, после перемещения узла)
+    const div = divRef.current;
+    div.addEventListener('dragover', handleDragOver);
+    div.addEventListener('drop', handleDrop);
+
+    // Слушаем изменения
+    const listener = (e) => {
       if (e.isTransactionFinished) {
-        onModelChange(JSON.parse(e.model.toJson()));
+        onModelChange(e.model.toJson());
       }
     };
-    diagram.addModelChangedListener(modelChangedListener);
+    diagram.addModelChangedListener(listener);
 
-    // --- Функция очистки ---
-    // React вызовет ее, когда компонент будет размонтирован (т.е. при смене `key` в App.jsx)
+    diagramRef.current = diagram;
+
+    // Очистка
     return () => {
-      canvas.removeEventListener('dragover', handleDragOver);
-      canvas.removeEventListener('drop', handleDrop);
-      
-      // Правильно уничтожаем экземпляр диаграммы, чтобы избежать утечек памяти и ошибок
-      diagram.div = null; 
+      div.removeEventListener('dragover', handleDragOver);
+      div.removeEventListener('drop', handleDrop);
+      diagram.removeModelChangedListener(listener);
+      if (diagramRef.current) {
+        diagramRef.current.div = null;
+        diagramRef.current = null;
+      }
     };
-
-  // Зависимости хука. Эффект будет перезапускаться при изменении этих пропсов.
-  // Использование `key` в App.jsx делает этот механизм еще надежнее.
   }, [diagramType, modelData, onModelChange]);
 
-  return <div ref={diagramRef} className="diagram-editor-container" />;
+  return <div ref={divRef} className="diagram-editor-container" />;
 }
 
 export default DiagramEditor;
