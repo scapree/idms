@@ -7,7 +7,7 @@ const ELEMENTS = {
     { text: 'Task', category: 'activity', taskType: 1 },
     { text: 'User Task', category: 'activity', taskType: 2 },
     { text: 'Service Task', category: 'activity', taskType: 3 },
-    { text: 'Subprocess', category: 'activity', taskType: 6 },
+    { text: 'Sub-process', category: 'activity', taskType: 6 },
     { text: 'Exclusive Gateway', category: 'gateway', gatewayType: 1 },
     { text: 'Parallel Gateway', category: 'gateway', gatewayType: 2 },
     { text: 'Inclusive Gateway', category: 'gateway', gatewayType: 3 },
@@ -18,11 +18,20 @@ const ELEMENTS = {
   DFD: [
     { text: 'Process', category: 'process' },
     { text: 'Data Store', category: 'store' },
-    { text: 'External Entity', category: 'external' },
-    { text: 'Data Flow', category: 'flow' }
+    { text: 'External Entity', category: 'external' }
+    // "Data Flow" is intentionally removed. It's a link, not a node.
   ],
   ERD: [
-    { text: 'Entity', category: 'entity' },
+    { 
+      text: 'Entity', 
+      category: 'entity',
+      // Add a default items array for the new template
+      items: [
+        { name: "ID", iskey: true },
+        { name: "Name", iskey: false },
+        { name: "SomeValue", iskey: false }
+      ]
+    },
     { text: 'Attribute', category: 'attribute' },
     { text: 'Relationship', category: 'relationship' }
   ]
