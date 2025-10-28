@@ -2,70 +2,56 @@ import React from 'react';
 
 const ELEMENTS = {
   BPMN: [
-    { text: 'Start Event', category: 'event', eventType: 1 },
-    { text: 'End Event', category: 'event', eventType: 2 },
-    { text: 'Task', category: 'activity', taskType: 1 },
-    { text: 'User Task', category: 'activity', taskType: 2 },
-    { text: 'Service Task', category: 'activity', taskType: 3 },
-    { text: 'Exclusive Gateway', category: 'gateway', gatewayType: 1 },
-    { text: 'Parallel Gateway', category: 'gateway', gatewayType: 2 },
-    // Добавлены пулы
-    { text: 'Pool / Lane', category: 'Pool', isGroup: true },
-  ],
-  DFD: [
-    { text: 'Process', category: 'process' },
-    { text: 'Data Store', category: 'store' },
-    { text: 'External Entity', category: 'external' }
+    { name: 'Start Event', icon: '○', description: 'Тонкий круг - начало процесса' },
+    { name: 'Task', icon: '▭', description: 'Прямоугольник с закругленными углами' },
+    { name: 'Gateway', icon: '◇', description: 'Ромб - точка принятия решения' },
+    { name: 'End Event', icon: '◉', description: 'Толстый круг - завершение процесса' }
   ],
   ERD: [
-    { 
-      text: 'Entity', 
-      category: 'entity',
-      items: [
-        { name: "ID", iskey: true, isfk: false },
-        { name: "AttributeName", iskey: false, isfk: false }
-      ]
-    },
-    // Связи создаются вручную, поэтому их нет на панели
+    { name: 'Entity', icon: '▭', description: 'Прямоугольник - сущность БД' },
+    { name: 'Attribute', icon: '◯', description: 'Эллипс - атрибут сущности' },
+    { name: 'Relationship', icon: '◇', description: 'Ромб - связь между сущностями' }
+  ],
+  DFD: [
+    { name: 'Process', icon: '◯', description: 'Круг - процесс обработки данных' },
+    { name: 'Data Store', icon: '≡', description: 'Параллельные линии - хранилище' },
+    { name: 'External Entity', icon: '▭', description: 'Прямоугольник - внешняя сущность' },
+    { name: 'Data Flow', icon: '→', description: 'Стрелка показывает поток данных' }
   ]
 };
 
-function ElementsSidebar({ activeDiagramType }) {
+function ElementsSidebar() {
   const onDragStart = (e, data) => {
     const jsonData = JSON.stringify(data);
     e.dataTransfer.setData('application/json', jsonData);
     e.dataTransfer.effectAllowed = 'copy';
   };
 
-  if (!activeDiagramType) {
-    return (
-      <aside className="elements-sidebar">
-        <h2 className="panel-title">Элементы</h2>
-        <p style={{ color: '#6c757d', fontSize: '0.9rem' }}>
-          Выберите диаграмму для отображения элементов
-        </p>
-      </aside>
-    );
-  }
-
-  const elements = ELEMENTS[activeDiagramType] || [];
-
   return (
     <aside className="elements-sidebar">
-      <h2 className="panel-title">Элементы {activeDiagramType}</h2>
-      <div className="element-group">
-        <div className="group-title">{activeDiagramType} Элементы</div>
-        {elements.map((item, index) => (
-          <div
-            key={index}
-            className="element-item"
-            draggable
-            onDragStart={e => onDragStart(e, { ...item, diagramType: activeDiagramType })}
-          >
-            {item.text}
+      <h2 className="panel-title">Элементы диаграмм</h2>
+      {Object.entries(ELEMENTS).map(([group, items]) => (
+        <div key={group} className="element-group">
+          <div className="group-title">{group}</div>
+          <div className="group-description">
+            {group === 'BPMN' && 'Business Process Model and Notation 2.0'}
+            {group === 'ERD' && 'Entity Relationship Diagram (Chen)'}
+            {group === 'DFD' && 'Data Flow Diagram (Yourdon)'}
           </div>
-        ))}
-      </div>
+          {items.map(item => (
+            <div
+              key={item.name}
+              className="element-item"
+              draggable
+              onDragStart={e => onDragStart(e, { group, text: item.name })}
+              title={item.description}
+            >
+              <span className="element-icon">{item.icon}</span>
+              <span className="element-name">{item.name}</span>
+            </div>
+          ))}
+        </div>
+      ))}
     </aside>
   );
 }
