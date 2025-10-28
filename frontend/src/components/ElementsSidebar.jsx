@@ -7,33 +7,26 @@ const ELEMENTS = {
     { text: 'Task', category: 'activity', taskType: 1 },
     { text: 'User Task', category: 'activity', taskType: 2 },
     { text: 'Service Task', category: 'activity', taskType: 3 },
-    { text: 'Sub-process', category: 'activity', taskType: 6 },
     { text: 'Exclusive Gateway', category: 'gateway', gatewayType: 1 },
     { text: 'Parallel Gateway', category: 'gateway', gatewayType: 2 },
-    { text: 'Inclusive Gateway', category: 'gateway', gatewayType: 3 },
-    { text: 'Data Object', category: 'dataobject' },
-    { text: 'Data Store', category: 'datastore' },
-    { text: 'Annotation', category: 'annotation' }
+    // Добавлены пулы
+    { text: 'Pool / Lane', category: 'Pool', isGroup: true },
   ],
   DFD: [
     { text: 'Process', category: 'process' },
     { text: 'Data Store', category: 'store' },
     { text: 'External Entity', category: 'external' }
-    // "Data Flow" is intentionally removed. It's a link, not a node.
   ],
   ERD: [
     { 
       text: 'Entity', 
       category: 'entity',
-      // Add a default items array for the new template
       items: [
-        { name: "ID", iskey: true },
-        { name: "Name", iskey: false },
-        { name: "SomeValue", iskey: false }
+        { name: "ID", iskey: true, isfk: false },
+        { name: "AttributeName", iskey: false, isfk: false }
       ]
     },
-    { text: 'Attribute', category: 'attribute' },
-    { text: 'Relationship', category: 'relationship' }
+    // Связи создаются вручную, поэтому их нет на панели
   ]
 };
 
