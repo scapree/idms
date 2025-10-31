@@ -24,4 +24,5 @@ urlpatterns = [
     path('register/', register_user, name='register'),
     path('login/', login_user, name='login'),
     path('projects/', ProjectApiView.as_view(), name = 'projects'),
+    path('projects/<int:pk>/', ProjectDelailApiView.as_view(), name='project_detail'),
 ]

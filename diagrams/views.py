@@ -48,21 +48,22 @@ def login_user(request):
 
 
 class ProjectApiView(generics.ListCreateAPIView):
-    # serializer_class = ProjectSerializer
+    serializer_class = ProjectSerializer
+    queryset = Project.objects.all()
 
-    # def get_queryset(self):
-    #     return Project.objects.all()
-        # return Project.objects.filter(user = self.request.user)
-
-    # def post(self, serializer):
-    #     return serializer.save(user = self.request.user)
+    def get_queryset(self):
+        return Project.objects.filter(user = self.request.user)
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        serializer.save(user = self.request.user)
 
 
 class ProjectDelailApiView(generics.RetrieveAPIView):
+    queryset = Project.objects.all()
     serializer_class = ProjectSerializer
-
+    
     def retrieve(self, request, *args, **kwargs):
-        return super().retrieve(request, *args, **kwargs)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+    
