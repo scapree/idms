@@ -23,6 +23,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('register/', register_user, name='register'),
     path('login/', login_user, name='login'),
+
     path('projects/', ProjectApiView.as_view(), name = 'projects'),
-    path('projects/<int:pk>/', ProjectDelailApiView.as_view(), name='project_detail'),
+    path('projects/<int:project_id>/', ProjectDetailApiView.as_view(), name='project_detail'),
+
+    path('projects/<int:project_id>/diagrams/', DiagramApiView.as_view(), name='diagrams'),
+    path('diagrams/<int:diagram_id>/', DiagramDetailApiView.as_view(), name='diagram_detail'),
 ]

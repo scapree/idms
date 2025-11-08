@@ -22,9 +22,11 @@ class Diagram(models.Model):
     description = models.TextField(max_length=255, blank=True, null=True)
     type = models.CharField(max_length=10, choices=DIAGRAM_TYPES)
     data = models.JSONField()
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='diagrams')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_locked = models.BooleanField(default=False)
+    locked_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='locked_diagrams')
 
 
 class Relation(models.Model):

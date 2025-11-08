@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth.password_validation import validate_password
-from .models import Project
+from .models import Project, Diagram
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -31,4 +31,21 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-# class DiagramSerializer(serializers.ModelSerializer):
+class DiagramSerializer(serializers.ModelSerializer):
+    locked_by = serializers.CharField(source='locked_by.username', read_only=True)
+    data = serializers.JSONField(required=False)
+
+    class Meta:
+        model = Diagram
+        fields = [
+            'id',
+            'name',
+            'type',
+            'data',
+            'is_locked',
+            'locked_by',
+            'project',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'is_locked', 'locked_by', 'data', 'created_at', 'updated_at']
