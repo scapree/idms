@@ -16,7 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from diagrams.views import *
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('register/', register_user, name='register'),
+    path('login/', login_user, name='login'),
+    path('projects/', ProjectApiView.as_view(), name = 'projects'),
+    path('projects/<int:pk>/', ProjectDelailApiView.as_view(), name='project_detail'),
 ]
