@@ -1,108 +1,57 @@
-// src/App.jsx
-import React, { useState, useCallback } from 'react';
-import './index.css';
-import './App.css';
-import TopBar from './components/TopBar';
-import DiagramTreePanel from './components/DiagramTreePanel';
-import ElementsSidebar from './components/ElementsSidebar';
-import DiagramEditor from './components/DiagramEditor';
-import DiagramTypeModal from './components/DiagramTypeModal';
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { useAuth, AuthProvider } from './hooks/useAuth.jsx'
+import LoginPage from './pages/LoginPage'
+import RegisterPage from './pages/RegisterPage'
+import DashboardPage from './pages/DashboardPage'
+import ProjectPage from './pages/ProjectPage'
+import InvitePage from './pages/InvitePage'
+import LoadingSpinner from './components/LoadingSpinner'
 
-const initialDiagrams = [
-  {
-    id: 1,
-    name: 'Процесс найма (BPMN)',
-    type: 'BPMN',
-    modelData: {
-      "class": "GraphLinksModel",
-      nodeDataArray: [],
-      linkDataArray: [],
-    },
-  },
-  {
-    id: 2,
-    name: 'База данных заказов (ERD)',
-    type: 'ERD',
-    modelData: {
-      "class": "GraphLinksModel",
-      nodeDataArray: [],
-      linkDataArray: [],
-    },
+function AppContent() {
+  const { user, isLoading } = useAuth()
+
+  if (isLoading) {
+    return <LoadingSpinner text="Initializing application..." />
   }
-];
-
-function App() {
-  const [diagrams, setDiagrams] = useState(initialDiagrams);
-  const [activeDiagramId, setActiveDiagramId] = useState(1);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const handleOpenModal = () => setIsModalOpen(true);
-  const handleCloseModal = () => setIsModalOpen(false);
-
-  const handleAddDiagram = (name, type) => {
-    const newDiagram = {
-      id: Date.now(),
-      name: name,
-      type: type.toUpperCase(),
-      modelData: {
-        "class": "GraphLinksModel",
-        nodeDataArray: [],
-        linkDataArray: [],
-      },
-    };
-    setDiagrams([...diagrams, newDiagram]);
-    setActiveDiagramId(newDiagram.id);
-    handleCloseModal();
-  };
-
-  const handleModelChange = useCallback((newModelDataString) => {
-    try {
-      const newModelData = JSON.parse(newModelDataString);
-      setDiagrams(prevDiagrams =>
-        prevDiagrams.map(diagram =>
-          diagram.id === activeDiagramId
-            ? { ...diagram, modelData: newModelData }
-            : diagram
-        )
-      );
-    } catch (e) {
-      console.error("Failed to parse model data:", e);
-    }
-  }, [activeDiagramId]);
-
-  const activeDiagram = diagrams.find(d => d.id === activeDiagramId);
 
   return (
-    <div className="app-container">
-      <TopBar />
-      <DiagramTreePanel
-        diagrams={diagrams}
-        activeDiagramId={activeDiagramId}
-        onSelectDiagram={setActiveDiagramId}
-        onAddDiagram={handleOpenModal}
-      />
-      {activeDiagram ? (
-        <DiagramEditor
-          // *** ИСПРАВЛЕНИЕ: Ключ `key` удален, чтобы предотвратить повторное монтирование компонента ***
-          diagramType={activeDiagram.type}
-          modelData={activeDiagram.modelData}
-          onModelChange={handleModelChange}
+    <div className="h-full bg-gray-50 flex flex-col overflow-hidden">
+      <Routes>
+        <Route 
+          path="/login" 
+          element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} 
         />
-      ) : (
-        <div className="diagram-editor-container" style={{ display: 'grid', placeContent: 'center' }}>
-            <p>Выберите диаграмму для редактирования.</p>
-        </div>
-      )}
-      <ElementsSidebar activeDiagramType={activeDiagram?.type} />
-      
-      {isModalOpen && (
-        <DiagramTypeModal 
-          onClose={handleCloseModal}
-          onCreate={handleAddDiagram} 
+        <Route 
+          path="/register" 
+          element={user ? <Navigate to="/dashboard" replace /> : <RegisterPage />} 
         />
-      )}
+        <Route 
+          path="/dashboard" 
+          element={user ? <DashboardPage /> : <Navigate to="/login" replace />} 
+        />
+        <Route 
+          path="/project/:projectId" 
+          element={user ? <ProjectPage /> : <Navigate to="/login" replace />} 
+        />
+        <Route 
+          path="/invite/:token" 
+          element={<InvitePage />} 
+        />
+        <Route 
+          path="/" 
+          element={<Navigate to={user ? "/dashboard" : "/login"} replace />} 
+        />
+      </Routes>
     </div>
-  );
+  )
 }
 
-export default App;
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  )
+}
+
+export default App

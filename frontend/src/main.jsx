@@ -1,10 +1,36 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import App from './App';
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { BrowserRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from 'react-query'
+import { Toaster } from 'react-hot-toast'
+import App from './App.jsx'
+import './index.css'
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+})
+
+ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}
+      >
+        <App />
+        <Toaster
+          position="top-center"
+          containerStyle={{ top: 72 }}
+        />
+      </BrowserRouter>
+    </QueryClientProvider>
+  </React.StrictMode>,
+)
+
