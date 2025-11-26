@@ -122,6 +122,8 @@ const CardinalityMarker = ({ x, y, angle, cardinality, optional, color, strokeWi
 const ERDEdge = (props) => {
   const {
     id,
+    source,
+    target,
     sourceX,
     sourceY,
     targetX,
@@ -173,6 +175,25 @@ const ERDEdge = (props) => {
   const sourceOptional = data?.sourceOptional || false
   const targetOptional = data?.targetOptional || false
   const symbolColor = data?.symbolColor || strokeColor
+  const entityId = data?.entityId
+  const relationshipId = data?.relationshipId
+
+  const entityIsSource = (() => {
+    if (entityId) {
+      if (entityId === source) return true
+      if (entityId === target) return false
+    }
+    if (relationshipId) {
+      if (relationshipId === source) return false
+      if (relationshipId === target) return true
+    }
+    return true
+  })()
+
+  const entityPoint = entityIsSource ? sourcePoint : targetPoint
+  const entityAngle = entityIsSource ? sourceAngle : targetAngle
+  const entityCardinality = entityIsSource ? sourceCardinality : targetCardinality
+  const entityOptional = entityIsSource ? sourceOptional : targetOptional
 
   const showLabel = label !== undefined && label !== null && String(label).length > 0
 
@@ -214,20 +235,11 @@ const ERDEdge = (props) => {
       />
 
       <CardinalityMarker
-        x={sourcePoint.x}
-        y={sourcePoint.y}
-        angle={sourceAngle}
-        cardinality={sourceCardinality}
-        optional={sourceOptional}
-        color={symbolColor}
-        strokeWidth={effectiveStrokeWidth}
-      />
-      <CardinalityMarker
-        x={targetPoint.x}
-        y={targetPoint.y}
-        angle={targetAngle}
-        cardinality={targetCardinality}
-        optional={targetOptional}
+        x={entityPoint.x}
+        y={entityPoint.y}
+        angle={entityAngle}
+        cardinality={entityCardinality}
+        optional={entityOptional}
         color={symbolColor}
         strokeWidth={effectiveStrokeWidth}
       />

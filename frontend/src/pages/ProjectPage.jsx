@@ -84,9 +84,21 @@ const ProjectPage = () => {
 
 
   useEffect(() => {
-    if (selectedDiagram?.diagram_type !== 'bpmn') {
-      setConnectionType('sequence-flow')
-    }
+    setConnectionType((prev) => {
+      if (!selectedDiagram) {
+        return 'sequence-flow'
+      }
+
+      if (selectedDiagram.diagram_type === 'erd') {
+        return prev && prev.startsWith('erd-') ? prev : 'erd-one-to-many'
+      }
+
+      if (selectedDiagram.diagram_type === 'bpmn') {
+        return prev && !prev.startsWith('erd-') ? prev : 'sequence-flow'
+      }
+
+      return 'sequence-flow'
+    })
   }, [selectedDiagram?.diagram_type])
 
   useEffect(() => {

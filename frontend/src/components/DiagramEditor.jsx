@@ -25,6 +25,144 @@ const createUniqueId = (prefix = 'id') => `${prefix}-${Date.now()}-${Math.random
 
 const ERD_HANDLE_SIDES = ['top', 'right', 'bottom', 'left']
 
+const DEFAULT_ERD_CONNECTION = {
+  sourceCardinality: 'one',
+  targetCardinality: 'many',
+  sourceOptional: false,
+  targetOptional: false,
+}
+
+const ERD_CONNECTION_PRESETS = {
+  'erd-one-to-one': {
+    sourceCardinality: 'one',
+    targetCardinality: 'one',
+    sourceOptional: false,
+    targetOptional: false,
+  },
+  'erd-one-to-one-optional': {
+    sourceCardinality: 'one',
+    targetCardinality: 'one',
+    sourceOptional: true,
+    targetOptional: true,
+  },
+  'erd-one-to-many': {
+    sourceCardinality: 'one',
+    targetCardinality: 'many',
+    sourceOptional: false,
+    targetOptional: false,
+  },
+  'erd-one-to-many-optional': {
+    sourceCardinality: 'one',
+    targetCardinality: 'many',
+    sourceOptional: true,
+    targetOptional: false,
+  },
+  'erd-many-to-many': {
+    sourceCardinality: 'many',
+    targetCardinality: 'many',
+    sourceOptional: false,
+    targetOptional: false,
+  },
+}
+
+const getErdConnectionData = (connectionType) =>
+  ERD_CONNECTION_PRESETS[connectionType] || DEFAULT_ERD_CONNECTION
+
+const getEntityCardinality = (connectionData, entityWasSource) => {
+  if (entityWasSource) {
+    return {
+      cardinality: connectionData.sourceCardinality,
+      optional: connectionData.sourceOptional,
+    }
+  }
+
+  return {
+    cardinality: connectionData.targetCardinality,
+    optional: connectionData.targetOptional,
+  }
+}
+
+const createErdEdge = ({
+  entityId,
+  relationshipId,
+  cardinality,
+  optional,
+  entityHandle,
+  relationshipHandle,
+}) => ({
+  id: createUniqueId('erd-edge'),
+  source: entityId,
+  target: relationshipId,
+  type: 'erd',
+  sourceHandle: entityHandle || undefined,
+  targetHandle: relationshipHandle || undefined,
+  style: { stroke: '#9333ea', strokeWidth: 2 },
+  data: {
+    sourceCardinality: cardinality,
+    sourceOptional: optional,
+    targetCardinality: 'one',
+    targetOptional: false,
+    symbolColor: '#9333ea',
+    entityId,
+    relationshipId,
+  },
+})
+
+const normalizeLoadedErdEdge = (edge, nodeShapeLookup) => {
+  if (!edge || edge.type !== 'erd') {
+    return edge
+  }
+
+  const sourceShape = nodeShapeLookup.get(edge.source)
+  const targetShape = nodeShapeLookup.get(edge.target)
+  const sourceIsEntity = sourceShape === 'entity'
+  const targetIsRelationship = targetShape === 'relationship'
+  const sourceIsRelationship = sourceShape === 'relationship'
+  const targetIsEntity = targetShape === 'entity'
+
+  if (sourceIsEntity && targetIsRelationship) {
+    return {
+      ...edge,
+      data: {
+        ...edge.data,
+        entityId: edge.data?.entityId || edge.source,
+        relationshipId: edge.data?.relationshipId || edge.target,
+      },
+    }
+  }
+
+  if (sourceIsRelationship && targetIsEntity) {
+    const swappedEdge = {
+      ...edge,
+      source: edge.target,
+      target: edge.source,
+      sourceHandle: edge.targetHandle,
+      targetHandle: edge.sourceHandle,
+      data: {
+        ...edge.data,
+        sourceCardinality:
+          edge.data?.targetCardinality ?? edge.data?.sourceCardinality ?? 'one',
+        targetCardinality:
+          edge.data?.sourceCardinality ?? edge.data?.targetCardinality ?? 'one',
+        sourceOptional:
+          typeof edge.data?.targetOptional === 'boolean'
+            ? edge.data.targetOptional
+            : edge.data?.sourceOptional ?? false,
+        targetOptional:
+          typeof edge.data?.sourceOptional === 'boolean'
+            ? edge.data.sourceOptional
+            : edge.data?.targetOptional ?? false,
+        entityId: edge.data?.entityId || edge.target,
+        relationshipId: edge.data?.relationshipId || edge.source,
+      },
+    }
+
+    return swappedEdge
+  }
+
+  return edge
+}
+
 const isErdEntity = (node) => node?.data?.shape === 'entity'
 const isErdRelationship = (node) => node?.data?.shape === 'relationship'
 
@@ -115,7 +253,6 @@ const DiagramEditor = ({ diagram, diagramType, isLocked, lockUser, connectionTyp
       if (diagramType === 'erd') {
         return {
           style: { stroke: '#111827', strokeWidth: 2 },
-          type: 'straight',
         }
       }
 
@@ -225,9 +362,10 @@ const DiagramEditor = ({ diagram, diagramType, isLocked, lockUser, connectionTyp
     
     // Small delay to show loading state
     const timer = setTimeout(() => {
-      if (diagram?.content) {
+      const rawContent = diagram?.data ?? diagram?.content
+      if (rawContent) {
         try {
-          const content = JSON.parse(diagram.content)
+          const content = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent
           const normalisedNodes = (content.nodes || []).map((node) =>
             isContainerShape(node?.data?.shape)
               ? {
@@ -240,7 +378,14 @@ const DiagramEditor = ({ diagram, diagramType, isLocked, lockUser, connectionTyp
               : node
           )
           setNodes(normalisedNodes)
-          const enrichedEdges = (content.edges || []).map((edge) => applyEdgeVisuals(edge))
+          const nodeShapeLookup = new Map(
+            normalisedNodes.map((node) => [node.id, node?.data?.shape])
+          )
+          const preparedEdges =
+            diagramType === 'erd'
+              ? (content.edges || []).map((edge) => normalizeLoadedErdEdge(edge, nodeShapeLookup))
+              : content.edges || []
+          const enrichedEdges = preparedEdges.map((edge) => applyEdgeVisuals(edge))
           setEdges(enrichedEdges)
         } catch (error) {
           console.error('Error parsing diagram content:', error)
@@ -256,7 +401,7 @@ const DiagramEditor = ({ diagram, diagramType, isLocked, lockUser, connectionTyp
     }, 100) // Small delay to ensure smooth transition
     
     return () => clearTimeout(timer)
-  }, [diagram, applyEdgeVisuals, setEdges, setNodes])
+  }, [diagram, applyEdgeVisuals, diagramType, setEdges, setNodes])
 
   // Auto-save functionality
   useEffect(() => {
@@ -281,8 +426,13 @@ const DiagramEditor = ({ diagram, diagramType, isLocked, lockUser, connectionTyp
           return
         }
 
-        // Only allow connections between Entity nodes
-        if (isErdEntity(sourceNode) && isErdEntity(targetNode)) {
+        const connectionData = getErdConnectionData(connectionType)
+        const sourceIsEntity = isErdEntity(sourceNode)
+        const targetIsEntity = isErdEntity(targetNode)
+        const sourceIsRelationship = isErdRelationship(sourceNode)
+        const targetIsRelationship = isErdRelationship(targetNode)
+
+        if (sourceIsEntity && targetIsEntity) {
           const relationshipWidth = 140
           const relationshipHeight = 140
 
@@ -327,56 +477,66 @@ const DiagramEditor = ({ diagram, diagramType, isLocked, lockUser, connectionTyp
 
           setNodes((currentNodes) => currentNodes.concat(relationshipNode))
 
-          // Get connection type data from connectionType
-          const connectionData = connectionType ? 
-            (connectionType.startsWith('erd-') ? 
-              (() => {
-                // Parse connection type to extract cardinality and optional flags
-                if (connectionType === 'erd-one-to-one') {
-                  return { sourceCardinality: 'one', targetCardinality: 'one', sourceOptional: false, targetOptional: false }
-                } else if (connectionType === 'erd-one-to-one-optional') {
-                  return { sourceCardinality: 'one', targetCardinality: 'one', sourceOptional: true, targetOptional: true }
-                } else if (connectionType === 'erd-one-to-many') {
-                  return { sourceCardinality: 'one', targetCardinality: 'many', sourceOptional: false, targetOptional: false }
-                } else if (connectionType === 'erd-one-to-many-optional') {
-                  return { sourceCardinality: 'one', targetCardinality: 'many', sourceOptional: true, targetOptional: false }
-                } else if (connectionType === 'erd-many-to-many') {
-                  return { sourceCardinality: 'many', targetCardinality: 'many', sourceOptional: false, targetOptional: false }
-                }
-                return { sourceCardinality: 'one', targetCardinality: 'many', sourceOptional: false, targetOptional: false }
-              })()
-              : { sourceCardinality: 'one', targetCardinality: 'many', sourceOptional: false, targetOptional: false }
-            )
-            : { sourceCardinality: 'one', targetCardinality: 'many', sourceOptional: false, targetOptional: false }
+          const firstEntityEdge = createErdEdge({
+            entityId: sourceNode.id,
+            relationshipId: relationshipNodeId,
+            cardinality: connectionData.sourceCardinality,
+            optional: connectionData.sourceOptional,
+            entityHandle: params.sourceHandle,
+          })
+
+          const secondEntityEdge = createErdEdge({
+            entityId: targetNode.id,
+            relationshipId: relationshipNodeId,
+            cardinality: connectionData.targetCardinality,
+            optional: connectionData.targetOptional,
+            entityHandle: params.targetHandle,
+          })
+
+          setEdges((currentEdges) => currentEdges.concat([firstEntityEdge, secondEntityEdge]))
+          return
+        }
+
+        const connectsEntityAndRelationship =
+          (sourceIsEntity && targetIsRelationship) || (sourceIsRelationship && targetIsEntity)
+
+        if (connectsEntityAndRelationship) {
+          const entityNode = sourceIsEntity ? sourceNode : targetNode
+          const relationshipNode = sourceIsRelationship ? sourceNode : targetNode
+          const entityWasSource = sourceIsEntity
+          const entityHandle = entityWasSource ? params.sourceHandle : params.targetHandle
+          const relationshipHandle = entityWasSource ? params.targetHandle : params.sourceHandle
+          const { cardinality, optional } = getEntityCardinality(connectionData, entityWasSource)
 
           setEdges((currentEdges) => {
-            const newEdges = [
-              {
-                id: createUniqueId('erd-edge'),
-                source: params.source,
-                target: relationshipNodeId,
-                type: 'erd',
-                style: { stroke: '#9333ea', strokeWidth: 2 },
-                data: connectionData,
-              },
-              {
-                id: createUniqueId('erd-edge'),
-                source: relationshipNodeId,
-                target: params.target,
-                type: 'erd',
-                style: { stroke: '#9333ea', strokeWidth: 2 },
-                data: connectionData,
-              },
-            ]
+            const alreadyConnected = currentEdges.some(
+              (edge) =>
+                edge.type === 'erd' &&
+                edge.source === entityNode.id &&
+                edge.target === relationshipNode.id
+            )
 
-            return currentEdges.concat(newEdges)
+            if (alreadyConnected) {
+              toast.error('This entity is already connected to the selected relationship')
+              return currentEdges
+            }
+
+            return currentEdges.concat(
+              createErdEdge({
+                entityId: entityNode.id,
+                relationshipId: relationshipNode.id,
+                cardinality,
+                optional,
+                entityHandle,
+                relationshipHandle,
+              })
+            )
           })
 
           return
         }
 
-        // Don't allow other types of connections in ERD
-        toast.error('You can only connect Entity nodes in ERD diagrams')
+        toast.error('ERD connections must link entities to entities or relationships')
         return
       }
 
@@ -488,8 +648,8 @@ const DiagramEditor = ({ diagram, diagramType, isLocked, lockUser, connectionTyp
     if (!diagram || isLocked) return
 
     setIsSaving(true)
-    const content = JSON.stringify({ nodes, edges })
-    updateDiagramMutation.mutate({ content })
+    const payload = { nodes, edges }
+    updateDiagramMutation.mutate({ data: payload })
   }, [diagram, nodes, edges, isLocked, updateDiagramMutation])
 
   const handleExport = (format) => {
