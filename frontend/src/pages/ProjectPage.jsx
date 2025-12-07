@@ -7,8 +7,9 @@ import DiagramEditor from '../components/DiagramEditor'
 import DiagramTree from '../components/DiagramTree'
 import DiagramPalette from '../components/DiagramPalette'
 import ExportModal from '../components/ExportModal'
+import DiagramTemplatesModal from '../components/DiagramTemplatesModal'
 import { useAuth } from '../hooks/useAuth'
-import { ArrowLeft, Plus, FileText, Share2, Copy, X, Download } from 'lucide-react'
+import { ArrowLeft, Plus, FileText, Share2, Copy, X, Download, LayoutTemplate } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const ProjectPage = () => {
@@ -24,6 +25,8 @@ const ProjectPage = () => {
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteLink, setInviteLink] = useState('')
   const [showExportModal, setShowExportModal] = useState(false)
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false)
+  const [pendingTemplate, setPendingTemplate] = useState(null)
   const { user } = useAuth()
   const heldLockRef = useRef(null)
   const diagramForceSaveRef = useRef(null)
@@ -185,10 +188,29 @@ const ProjectPage = () => {
       return
     }
 
-    createDiagramMutation.mutate({
+    const diagramData = {
       name: newDiagramName,
       diagram_type: selectedDiagramType,
-    })
+    }
+
+    // If we have a pending template, include its nodes and edges
+    if (pendingTemplate) {
+      diagramData.data = {
+        nodes: pendingTemplate.nodes || [],
+        edges: pendingTemplate.edges || [],
+      }
+    }
+
+    createDiagramMutation.mutate(diagramData)
+    setPendingTemplate(null)
+  }
+
+  const handleSelectTemplate = (template) => {
+    setPendingTemplate(template)
+    setSelectedDiagramType(template.diagramType)
+    setNewDiagramName(template.name)
+    setShowTemplatesModal(false)
+    setShowCreateModal(true)
   }
 
   const handleCreateInvite = () => {
@@ -330,7 +352,18 @@ const ProjectPage = () => {
             Поделиться
           </button>
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => setShowTemplatesModal(true)}
+            className="btn btn-secondary btn-sm"
+          >
+            <LayoutTemplate className="h-4 w-4 mr-1" />
+            Шаблоны
+          </button>
+          <button
+            onClick={() => {
+              setPendingTemplate(null)
+              setNewDiagramName('')
+              setShowCreateModal(true)
+            }}
             className="btn btn-primary btn-sm"
           >
             <Plus className="h-4 w-4 mr-1" />
@@ -399,10 +432,28 @@ const ProjectPage = () => {
           <div className="bg-white rounded-lg border border-gray-200 w-96 max-h-[90vh] overflow-hidden">
             <div className="px-5 py-4 bg-gray-50 border-b">
               <h3 className="text-base font-semibold text-gray-900">
-                Новая диаграмма
+                {pendingTemplate ? 'Создать из шаблона' : 'Новая диаграмма'}
               </h3>
             </div>
             <div className="p-5 space-y-4">
+              {/* Template indicator */}
+              {pendingTemplate && (
+                <div className="flex items-center justify-between p-3 bg-primary-50 border border-primary-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <LayoutTemplate className="w-4 h-4 text-primary-600" />
+                    <span className="text-sm font-medium text-primary-700">
+                      {pendingTemplate.name}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setPendingTemplate(null)}
+                    className="text-primary-500 hover:text-primary-700"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+              
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Название диаграммы
@@ -422,8 +473,15 @@ const ProjectPage = () => {
                 </label>
                 <select
                   value={selectedDiagramType}
-                  onChange={(e) => setSelectedDiagramType(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedDiagramType(e.target.value)
+                    // Clear template if type changes
+                    if (pendingTemplate && pendingTemplate.diagramType !== e.target.value) {
+                      setPendingTemplate(null)
+                    }
+                  }}
                   className="input"
+                  disabled={!!pendingTemplate}
                 >
                   <option value="bpmn">BPMN</option>
                   <option value="erd">ERD</option>
@@ -436,6 +494,7 @@ const ProjectPage = () => {
                   onClick={() => {
                     setShowCreateModal(false)
                     setNewDiagramName('')
+                    setPendingTemplate(null)
                   }}
                   className="btn btn-secondary btn-md"
                 >
@@ -504,6 +563,14 @@ const ProjectPage = () => {
         projectName={project?.name}
         diagrams={diagrams}
         mode={selectedDiagram ? 'single' : 'project'}
+      />
+
+      {/* Templates Modal */}
+      <DiagramTemplatesModal
+        isOpen={showTemplatesModal}
+        onClose={() => setShowTemplatesModal(false)}
+        onSelectTemplate={handleSelectTemplate}
+        diagramType={selectedDiagramType}
       />
     </div>
   )

@@ -164,9 +164,47 @@ const ExportModal = ({
     return pdf
   }
 
+  // Deselect all elements before export
+  const deselectAll = () => {
+    if (!reactFlowInstance) return null
+    
+    const nodes = reactFlowInstance.getNodes()
+    const edges = reactFlowInstance.getEdges()
+    
+    // Store current selection
+    const selectedNodes = nodes.filter(n => n.selected).map(n => n.id)
+    const selectedEdges = edges.filter(e => e.selected).map(e => e.id)
+    
+    // Deselect all
+    reactFlowInstance.setNodes(nodes.map(n => ({ ...n, selected: false })))
+    reactFlowInstance.setEdges(edges.map(e => ({ ...e, selected: false })))
+    
+    return { selectedNodes, selectedEdges }
+  }
+  
+  // Restore selection after export
+  const restoreSelection = (selection) => {
+    if (!reactFlowInstance || !selection) return
+    
+    const { selectedNodes, selectedEdges } = selection
+    
+    reactFlowInstance.setNodes(nodes => 
+      nodes.map(n => ({ ...n, selected: selectedNodes.includes(n.id) }))
+    )
+    reactFlowInstance.setEdges(edges => 
+      edges.map(e => ({ ...e, selected: selectedEdges.includes(e.id) }))
+    )
+  }
+
   const handleExport = async () => {
     setIsExporting(true)
     setExportedFiles([])
+    
+    // Deselect all before export
+    const previousSelection = deselectAll()
+    
+    // Small delay to let React re-render without selection
+    await new Promise(resolve => setTimeout(resolve, 100))
     
     try {
       const settings = qualitySettings[quality]
@@ -201,6 +239,8 @@ const ExportModal = ({
     } catch (error) {
       console.error('Export failed:', error)
     } finally {
+      // Restore selection after export
+      restoreSelection(previousSelection)
       setIsExporting(false)
     }
   }

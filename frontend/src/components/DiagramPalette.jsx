@@ -54,20 +54,20 @@ const TASK_VARIANTS = [
 ]
 
 const GATEWAYS = [
-  { id: 'exclusive-gateway', name: 'Исключающий шлюз', icon: 'X', color: '#f97316' },
-  { id: 'inclusive-gateway', name: 'Включающий шлюз', icon: 'Circle', color: '#6366f1' },
-  { id: 'parallel-gateway', name: 'Параллельный шлюз', icon: 'Plus', color: '#22c55e' },
-  { id: 'complex-gateway', name: 'Сложный шлюз', icon: 'Sparkles', color: '#8b5cf6' },
-  { id: 'exclusive-event-gateway', name: 'Событийный шлюз', icon: 'CircleDot', color: '#0ea5e9' },
-  { id: 'parallel-event-gateway', name: 'Парал. событийный', icon: 'Equal', color: '#22d3ee' },
+  { id: 'exclusive-gateway', name: 'Исключающий шлюз', shortLabel: 'XOR', icon: 'X', color: '#f97316' },
+  { id: 'inclusive-gateway', name: 'Включающий шлюз', shortLabel: 'OR', icon: 'Circle', color: '#6366f1' },
+  { id: 'parallel-gateway', name: 'Параллельный шлюз', shortLabel: 'AND', icon: 'Plus', color: '#22c55e' },
+  { id: 'complex-gateway', name: 'Сложный шлюз', shortLabel: 'Сложный', icon: 'Sparkles', color: '#8b5cf6' },
+  { id: 'exclusive-event-gateway', name: 'Событийный шлюз', shortLabel: 'Событ.', icon: 'CircleDot', color: '#0ea5e9' },
+  { id: 'parallel-event-gateway', name: 'Парал. событийный', shortLabel: 'Парал.', icon: 'Equal', color: '#22d3ee' },
 ]
 
 const DATA_OBJECTS = [
-  { id: 'data-object', name: 'Объект данных', icon: 'FileText', color: '#38bdf8' },
-  { id: 'data-collection', name: 'Коллекция данных', icon: 'Files', color: '#6366f1' },
-  { id: 'data-input', name: 'Входные данные', icon: 'ArrowDownToLine', color: '#22c55e' },
-  { id: 'data-output', name: 'Выходные данные', icon: 'ArrowUpFromLine', color: '#f97316' },
-  { id: 'data-store', name: 'Хранилище данных', icon: 'Database', color: '#14b8a6', shape: 'cylinder' },
+  { id: 'data-object', name: 'Объект данных', shortLabel: 'Данные', icon: 'FileText', color: '#38bdf8' },
+  { id: 'data-collection', name: 'Коллекция данных', shortLabel: 'Коллекция', icon: 'Files', color: '#6366f1' },
+  { id: 'data-input', name: 'Входные данные', shortLabel: 'Вход', icon: 'ArrowDownToLine', color: '#22c55e' },
+  { id: 'data-output', name: 'Выходные данные', shortLabel: 'Выход', icon: 'ArrowUpFromLine', color: '#f97316' },
+  { id: 'data-store', name: 'Хранилище данных', shortLabel: 'Хранилище', icon: 'Database', color: '#14b8a6', shape: 'cylinder' },
 ]
 
 const ARTIFACTS = [
@@ -91,15 +91,15 @@ const BPMN_CONNECTORS = [
 ]
 
 const createEventElement = (stage, variant) => {
-  const baseName = `${capitalize(stage)} ${variant.label} Event`
+  const displayName = `${STAGE_LABELS[stage]} ${variant.label}`
   const style = EVENT_STYLES[stage]
   return {
     id: `bpmn-${stage}-${variant.key}-event`,
-    name: baseName,
+    name: displayName,
     previewColor: style.borderColor,
     paletteIcon: variant.icon,
     nodeConfig: {
-      label: baseName, shape: 'circle', width: 40, height: 40,
+      label: displayName, shape: 'circle', width: 40, height: 40,
       background: style.background, borderColor: style.borderColor,
       borderWidth: style.borderWidth, innerBorderWidth: style.innerBorderWidth,
       innerBorderColor: style.innerBorderColor, textColor: style.textColor,
@@ -114,6 +114,12 @@ const STAGE_TITLES = {
   start: 'Начальные события',
   intermediate: 'Промежуточные события', 
   end: 'Конечные события',
+}
+
+const STAGE_LABELS = {
+  start: 'Начало',
+  intermediate: 'Промеж.',
+  end: 'Конец',
 }
 
 const buildBpmnGroups = () => {
@@ -136,7 +142,7 @@ const buildBpmnGroups = () => {
   const gateways = GATEWAYS.map((gateway) => ({
     id: `bpmn-${gateway.id}`, name: gateway.name, previewColor: gateway.color, paletteIcon: gateway.icon,
     nodeConfig: {
-      label: gateway.name, shape: 'diamond', width: 50, height: 50,
+      label: gateway.shortLabel || gateway.name, shape: 'diamond', width: 50, height: 50,
       background: '#ffffff', borderColor: gateway.color, borderWidth: 2, textColor: gateway.color,
       showLabelInside: false, labelPosition: 'bottom', icon: gateway.icon, iconColor: gateway.color,
       handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
@@ -146,9 +152,9 @@ const buildBpmnGroups = () => {
   const dataObjects = DATA_OBJECTS.map((obj) => ({
     id: `bpmn-${obj.id}`, name: obj.name, previewColor: obj.color, paletteIcon: obj.icon,
     nodeConfig: {
-      label: obj.name, shape: obj.shape || 'data-object', width: 40, height: 50,
+      label: obj.shortLabel || obj.name, shape: obj.shape || 'data-object', width: 100, height: 80,
       background: '#ffffff', borderColor: obj.color, borderWidth: 2, textColor: '#111827',
-      icon: obj.icon, iconColor: obj.color,
+      icon: obj.icon, iconColor: obj.color, showLabelInside: true,
       handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
     },
   }))
