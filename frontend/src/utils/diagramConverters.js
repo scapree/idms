@@ -193,25 +193,29 @@ export function bpmnToDiagram(xmlString) {
     }
   })
   
-  // Map BPMN elements to internal shapes
+  // Map BPMN elements to internal shapes with correct sizes
   const REVERSE_ELEMENT_MAP = {
-    startEvent: { shape: 'circle', borderColor: '#10b981' },
-    endEvent: { shape: 'circle', borderColor: '#ef4444', borderWidth: 4 },
-    intermediateThrowEvent: { shape: 'circle', borderColor: '#6366f1' },
-    intermediateCatchEvent: { shape: 'circle', borderColor: '#6366f1' },
-    task: { shape: 'rectangle', borderColor: '#2563eb' },
-    userTask: { shape: 'rectangle', borderColor: '#0ea5e9', icon: 'User' },
-    serviceTask: { shape: 'rectangle', borderColor: '#7c3aed', icon: 'Cog' },
-    scriptTask: { shape: 'rectangle', borderColor: '#f59e0b', icon: 'FileCode' },
-    manualTask: { shape: 'rectangle', borderColor: '#f97316', icon: 'Hand' },
-    sendTask: { shape: 'rectangle', borderColor: '#6366f1', icon: 'Send' },
-    receiveTask: { shape: 'rectangle', borderColor: '#22c55e', icon: 'Download' },
-    exclusiveGateway: { shape: 'diamond', borderColor: '#f97316', icon: 'X' },
-    parallelGateway: { shape: 'diamond', borderColor: '#22c55e', icon: 'Plus' },
-    inclusiveGateway: { shape: 'diamond', borderColor: '#6366f1', icon: 'Circle' },
-    complexGateway: { shape: 'diamond', borderColor: '#8b5cf6', icon: 'Sparkles' },
-    dataObjectReference: { shape: 'data-object', borderColor: '#38bdf8' },
-    dataStoreReference: { shape: 'cylinder', borderColor: '#14b8a6' },
+    // Events - 40x40 circles
+    startEvent: { shape: 'circle', borderColor: '#10b981', width: 40, height: 40, showLabelInside: false, labelPosition: 'bottom' },
+    endEvent: { shape: 'circle', borderColor: '#ef4444', borderWidth: 4, width: 40, height: 40, showLabelInside: false, labelPosition: 'bottom' },
+    intermediateThrowEvent: { shape: 'circle', borderColor: '#6366f1', width: 40, height: 40, showLabelInside: false, labelPosition: 'bottom' },
+    intermediateCatchEvent: { shape: 'circle', borderColor: '#6366f1', width: 40, height: 40, showLabelInside: false, labelPosition: 'bottom' },
+    // Tasks - 100x80 rectangles
+    task: { shape: 'rectangle', borderColor: '#2563eb', width: 100, height: 80, borderRadius: 8 },
+    userTask: { shape: 'rectangle', borderColor: '#0ea5e9', icon: 'User', width: 100, height: 80, borderRadius: 8 },
+    serviceTask: { shape: 'rectangle', borderColor: '#7c3aed', icon: 'Cog', width: 100, height: 80, borderRadius: 8 },
+    scriptTask: { shape: 'rectangle', borderColor: '#f59e0b', icon: 'FileCode', width: 100, height: 80, borderRadius: 8 },
+    manualTask: { shape: 'rectangle', borderColor: '#f97316', icon: 'Hand', width: 100, height: 80, borderRadius: 8 },
+    sendTask: { shape: 'rectangle', borderColor: '#6366f1', icon: 'Send', width: 100, height: 80, borderRadius: 8 },
+    receiveTask: { shape: 'rectangle', borderColor: '#22c55e', icon: 'Download', width: 100, height: 80, borderRadius: 8 },
+    // Gateways - 50x50 diamonds
+    exclusiveGateway: { shape: 'diamond', borderColor: '#f97316', icon: 'X', width: 50, height: 50, showLabelInside: false, labelPosition: 'bottom' },
+    parallelGateway: { shape: 'diamond', borderColor: '#22c55e', icon: 'Plus', width: 50, height: 50, showLabelInside: false, labelPosition: 'bottom' },
+    inclusiveGateway: { shape: 'diamond', borderColor: '#6366f1', icon: 'Circle', width: 50, height: 50, showLabelInside: false, labelPosition: 'bottom' },
+    complexGateway: { shape: 'diamond', borderColor: '#8b5cf6', icon: 'Sparkles', width: 50, height: 50, showLabelInside: false, labelPosition: 'bottom' },
+    // Data objects
+    dataObjectReference: { shape: 'data-object', borderColor: '#38bdf8', width: 100, height: 80 },
+    dataStoreReference: { shape: 'cylinder', borderColor: '#14b8a6', width: 100, height: 80 },
   }
   
   // Parse elements
@@ -221,7 +225,7 @@ export function bpmnToDiagram(xmlString) {
       const id = element.getAttribute('id')
       const name = element.getAttribute('name') || id
       const config = REVERSE_ELEMENT_MAP[elementType]
-      const position = shapes[id] || { x: Math.random() * 500, y: Math.random() * 300, width: 100, height: 80 }
+      const position = shapes[id] || { x: Math.random() * 500, y: Math.random() * 300 }
       
       nodes.push({
         id,
@@ -230,14 +234,17 @@ export function bpmnToDiagram(xmlString) {
         data: {
           label: name,
           shape: config.shape,
-          width: position.width,
-          height: position.height,
+          width: config.width,
+          height: config.height,
           background: '#ffffff',
           borderColor: config.borderColor,
           borderWidth: config.borderWidth || 2,
+          borderRadius: config.borderRadius,
           textColor: '#111827',
           icon: config.icon,
           iconColor: config.borderColor,
+          showLabelInside: config.showLabelInside,
+          labelPosition: config.labelPosition,
           handles: { incoming: ['top', 'right', 'bottom', 'left'], outgoing: ['top', 'right', 'bottom', 'left'] },
         },
       })
@@ -256,6 +263,8 @@ export function bpmnToDiagram(xmlString) {
         id,
         source: sourceRef,
         target: targetRef,
+        sourceHandle: 'source-right',
+        targetHandle: 'target-left',
         label: name,
         type: 'default',
         style: { stroke: '#1f2937', strokeWidth: 2 },
@@ -500,6 +509,8 @@ export function sqlToDiagram(sqlString) {
           id: `edge-${node.id}-${targetNode.id}-${fkIndex}`,
           source: targetNode.id,
           target: node.id,
+          sourceHandle: 'source-right',
+          targetHandle: 'target-left',
           type: 'erd',
           data: { 
             sourceCardinality: 'one',
@@ -610,9 +621,16 @@ export function diagramToJSONSchema(diagram) {
       id: edge.id,
       source: edge.source,
       target: edge.target,
+      sourceHandle: edge.sourceHandle || null,
+      targetHandle: edge.targetHandle || null,
       type: edge.type || 'default',
       label: edge.label || '',
-      properties: edge.data || {},
+      properties: {
+        ...edge.data,
+        style: edge.style,
+        markerEnd: edge.markerEnd,
+        markerStart: edge.markerStart,
+      },
     })),
   }
   
@@ -630,39 +648,48 @@ export function jsonSchemaToDiagram(jsonData) {
   const data = jsonData.data || jsonData
   const metadata = data.metadata || {}
   
-  const nodes = (data.elements || []).map(element => ({
-    id: element.id,
-    type: 'shape',
-    position: element.position || { x: 0, y: 0 },
-    data: {
-      label: element.label || element.id,
-      shape: element.type || 'rectangle',
-      width: element.properties?.width || 100,
-      height: element.properties?.height || 80,
-      background: element.properties?.background || '#ffffff',
-      borderColor: element.properties?.borderColor || '#2563eb',
-      borderWidth: element.properties?.borderWidth || 2,
-      textColor: element.properties?.textColor || '#111827',
-      icon: element.properties?.icon,
-      iconColor: element.properties?.iconColor,
-      attributes: element.properties?.attributes,
-      handles: element.properties?.handles || { 
+  const nodes = (data.elements || []).map(element => {
+    // Use all properties from element.properties, just ensure shape is set
+    const nodeData = {
+      ...element.properties,
+      label: element.properties?.label || element.label || element.id,
+      shape: element.properties?.shape || element.type || 'rectangle',
+    }
+    
+    // Ensure handles exist
+    if (!nodeData.handles) {
+      nodeData.handles = { 
         incoming: ['top', 'right', 'bottom', 'left'], 
         outgoing: ['top', 'right', 'bottom', 'left'] 
-      },
-    },
-  }))
+      }
+    }
+    
+    return {
+      id: element.id,
+      type: 'shape',
+      position: element.position || { x: 0, y: 0 },
+      data: nodeData,
+    }
+  })
   
-  const edges = (data.connections || []).map(conn => ({
-    id: conn.id,
-    source: conn.source,
-    target: conn.target,
-    type: conn.type || 'default',
-    label: conn.label || '',
-    data: conn.properties || {},
-    style: { stroke: '#1f2937', strokeWidth: 2 },
-    markerEnd: { type: 'arrowclosed' },
-  }))
+  const edges = (data.connections || []).map(conn => {
+    // Extract style properties from properties
+    const { style, markerEnd, markerStart, ...restProperties } = conn.properties || {}
+    
+    return {
+      id: conn.id,
+      source: conn.source,
+      target: conn.target,
+      sourceHandle: conn.sourceHandle || null,
+      targetHandle: conn.targetHandle || null,
+      type: conn.type || 'default',
+      label: conn.label || '',
+      data: restProperties,
+      style: style || { stroke: '#1f2937', strokeWidth: 2 },
+      markerEnd: markerEnd || { type: 'arrowclosed' },
+      ...(markerStart && { markerStart }),
+    }
+  })
   
   return {
     name: metadata.name || 'Imported Diagram',
