@@ -195,11 +195,11 @@ export function bpmnToDiagram(xmlString) {
   
   // Map BPMN elements to internal shapes with correct sizes
   const REVERSE_ELEMENT_MAP = {
-    // Events - 40x40 circles
-    startEvent: { shape: 'circle', borderColor: '#10b981', width: 40, height: 40, showLabelInside: false, labelPosition: 'bottom' },
-    endEvent: { shape: 'circle', borderColor: '#ef4444', borderWidth: 4, width: 40, height: 40, showLabelInside: false, labelPosition: 'bottom' },
-    intermediateThrowEvent: { shape: 'circle', borderColor: '#6366f1', width: 40, height: 40, showLabelInside: false, labelPosition: 'bottom' },
-    intermediateCatchEvent: { shape: 'circle', borderColor: '#6366f1', width: 40, height: 40, showLabelInside: false, labelPosition: 'bottom' },
+    // Events - 40x40 circles with inner circle
+    startEvent: { shape: 'circle', borderColor: '#10b981', width: 40, height: 40, showLabelInside: false, labelPosition: 'bottom', hasInnerCircle: true },
+    endEvent: { shape: 'circle', borderColor: '#ef4444', borderWidth: 4, width: 40, height: 40, showLabelInside: false, labelPosition: 'bottom', hasInnerCircle: true },
+    intermediateThrowEvent: { shape: 'circle', borderColor: '#6366f1', width: 40, height: 40, showLabelInside: false, labelPosition: 'bottom', hasInnerCircle: true },
+    intermediateCatchEvent: { shape: 'circle', borderColor: '#6366f1', width: 40, height: 40, showLabelInside: false, labelPosition: 'bottom', hasInnerCircle: true },
     // Tasks - 100x80 rectangles
     task: { shape: 'rectangle', borderColor: '#2563eb', width: 100, height: 80, borderRadius: 8 },
     userTask: { shape: 'rectangle', borderColor: '#0ea5e9', icon: 'User', width: 100, height: 80, borderRadius: 8 },
@@ -245,11 +245,52 @@ export function bpmnToDiagram(xmlString) {
           iconColor: config.borderColor,
           showLabelInside: config.showLabelInside,
           labelPosition: config.labelPosition,
+          hasInnerCircle: config.hasInnerCircle,
           handles: { incoming: ['top', 'right', 'bottom', 'left'], outgoing: ['top', 'right', 'bottom', 'left'] },
         },
       })
     })
   })
+  
+  // Helper function to determine best handle based on relative positions
+  const getBestHandles = (sourceNode, targetNode) => {
+    if (!sourceNode || !targetNode) {
+      return { sourceHandle: 'source-right', targetHandle: 'target-left' }
+    }
+    
+    const sx = sourceNode.position.x + (sourceNode.data?.width || 50) / 2
+    const sy = sourceNode.position.y + (sourceNode.data?.height || 50) / 2
+    const tx = targetNode.position.x + (targetNode.data?.width || 50) / 2
+    const ty = targetNode.position.y + (targetNode.data?.height || 50) / 2
+    
+    const dx = tx - sx
+    const dy = ty - sy
+    
+    // Determine direction based on angle
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI)
+    
+    let sourceHandle, targetHandle
+    
+    if (angle >= -45 && angle < 45) {
+      // Target is to the right
+      sourceHandle = 'source-right'
+      targetHandle = 'target-left'
+    } else if (angle >= 45 && angle < 135) {
+      // Target is below
+      sourceHandle = 'source-bottom'
+      targetHandle = 'target-top'
+    } else if (angle >= -135 && angle < -45) {
+      // Target is above
+      sourceHandle = 'source-top'
+      targetHandle = 'target-bottom'
+    } else {
+      // Target is to the left
+      sourceHandle = 'source-left'
+      targetHandle = 'target-right'
+    }
+    
+    return { sourceHandle, targetHandle }
+  }
   
   // Parse sequence flows
   process.querySelectorAll('sequenceFlow').forEach(flow => {
@@ -259,12 +300,17 @@ export function bpmnToDiagram(xmlString) {
     const name = flow.getAttribute('name') || ''
     
     if (sourceRef && targetRef) {
+      // Find source and target nodes to determine best handles
+      const sourceNode = nodes.find(n => n.id === sourceRef)
+      const targetNode = nodes.find(n => n.id === targetRef)
+      const { sourceHandle, targetHandle } = getBestHandles(sourceNode, targetNode)
+      
       edges.push({
         id,
         source: sourceRef,
         target: targetRef,
-        sourceHandle: 'source-right',
-        targetHandle: 'target-left',
+        sourceHandle,
+        targetHandle,
         label: name,
         type: 'default',
         style: { stroke: '#1f2937', strokeWidth: 2 },

@@ -45,7 +45,7 @@ const ExportModal = ({
     if (diagramType === 'bpmn') {
       baseFormats.push({ 
         id: 'bpmn', 
-        label: 'BPMN 2.0', 
+        label: 'BPMN 2.0 (beta)', 
         icon: FileCode, 
         description: 'XML стандарт' 
       })

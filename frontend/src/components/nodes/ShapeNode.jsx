@@ -293,13 +293,32 @@ const ShapeNode = ({ data = {} }) => {
 
   const renderCircle = () => {
     const size = Math.max(width, height)
+    const hasInner = data.hasInnerCircle
+    const innerSize = size - 8 // Inner circle is 8px smaller (4px gap on each side)
+    
     return (
       <div className="flex flex-col items-center">
-        <div className="flex items-center justify-center" style={{ 
-          width: size, height: size, 
-          backgroundColor: background, borderColor, borderStyle, borderWidth, 
-          borderRadius: '50%' 
-        }}>
+        <div 
+          className="flex items-center justify-center relative" 
+          style={{ 
+            width: size, height: size, 
+            backgroundColor: background, borderColor, borderStyle, borderWidth, 
+            borderRadius: '50%' 
+          }}
+        >
+          {/* Inner circle for events */}
+          {hasInner && (
+            <div 
+              className="absolute"
+              style={{
+                width: innerSize,
+                height: innerSize,
+                borderRadius: '50%',
+                border: `${borderWidth}px ${borderStyle} ${borderColor}`,
+                backgroundColor: 'transparent',
+              }}
+            />
+          )}
           {renderContentInner()}
         </div>
         {!showLabelInside && labelPosition === 'bottom' && renderLabel('bottom')}
