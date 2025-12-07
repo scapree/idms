@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react'
 import { Handle, Position } from 'reactflow'
 import * as Icons from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 
 const DEFAULT_TEXT_STYLES = {
   fontWeight: 600,
@@ -58,7 +59,25 @@ const ShapeNode = ({ data = {} }) => {
     headerBackground = '#e2e8f0',
     headerTextColor = '#0f172a',
     decoration,
+    // Link-related props
+    linkedDiagram,
+    linkedDiagramName,
+    linkedDiagramType,
+    linkedDiagramProject,
+    linkCount = 0,
   } = data
+
+  const hasLink = Boolean(linkedDiagram)
+
+  // Handle badge click - dispatch custom event for navigation
+  const handleBadgeClick = (e) => {
+    e.stopPropagation()
+    if (linkedDiagram) {
+      window.dispatchEvent(new CustomEvent('navigate-to-diagram', {
+        detail: { diagramId: linkedDiagram, projectId: linkedDiagramProject }
+      }))
+    }
+  }
 
   const IconComponent = useMemo(() => {
     if (!icon) return null
@@ -209,8 +228,41 @@ const ShapeNode = ({ data = {} }) => {
     return base
   }
 
+  // Link indicator badge
+  const renderLinkBadge = () => {
+    if (!hasLink) return null
+    
+    const displayCount = linkCount > 1
+    const tooltipText = linkCount > 1 
+      ? `${linkCount} links (click to go, right-click for all)`
+      : `Click to go to ${linkedDiagramName}`
+    
+    return (
+      <div 
+        onClick={handleBadgeClick}
+        className="absolute -top-2 -right-2 z-20 flex items-center justify-center bg-indigo-500 rounded-full shadow-lg cursor-pointer group/badge transition-all hover:scale-110 hover:bg-indigo-600 active:scale-95"
+        style={{ 
+          minWidth: 24, 
+          height: 24,
+          padding: displayCount ? '0 6px' : 0
+        }}
+        title={tooltipText}
+      >
+        {displayCount ? (
+          <span className="text-white text-xs font-bold">{linkCount}</span>
+        ) : (
+          <ExternalLink className="w-3 h-3 text-white" />
+        )}
+        {/* Tooltip on hover */}
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover/badge:opacity-100 transition-opacity pointer-events-none">
+          {tooltipText}
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="relative group">
+    <div className={`relative group ${hasLink ? 'cursor-pointer' : ''}`}>
       {handleDefinitions.map((handle, index) => (
         <Handle
           key={`${handle.type}-${handle.position}-${index}`}
@@ -222,6 +274,18 @@ const ShapeNode = ({ data = {} }) => {
         />
       ))}
       {renderByShape()}
+      {renderLinkBadge()}
+      
+      {/* Subtle glow effect for linked nodes */}
+      {hasLink && (
+        <div 
+          className="absolute inset-0 rounded-lg pointer-events-none"
+          style={{
+            boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.3)',
+            borderRadius: shape === 'circle' ? '50%' : borderRadius,
+          }}
+        />
+      )}
     </div>
   )
 }

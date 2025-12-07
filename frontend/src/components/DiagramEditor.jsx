@@ -12,13 +12,14 @@ import ReactFlow, {
   useReactFlow,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { useMutation, useQueryClient } from 'react-query'
+import { useMutation, useQueryClient, useQuery } from 'react-query'
 import { diagramsAPI } from '../api'
-import { Save, CheckCircle2 } from 'lucide-react'
+import { Save, CheckCircle2, Link2, ExternalLink, Unlink, ArrowUpRight } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ShapeNode from './nodes/ShapeNode'
 import ERDEdge from './edges/ERDEdge'
 import AttributeModal from './AttributeModal'
+import LinkDiagramModal from './LinkDiagramModal'
 
 // --- CONSTANTS ---
 const createUniqueId = (prefix = 'id') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -124,7 +125,7 @@ const dataChanged = (oldNodes, oldEdges, newNodes, newEdges) => {
 const DiagramEditorContent = ({ 
   diagram, diagramType, isLocked, connectionType, 
   nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange,
-  onDataChange, initialDataRef, setForceSaveRef
+  onDataChange, initialDataRef, setForceSaveRef, onNavigateToDiagram
 }) => {
   const reactFlowInstance = useReactFlow()
   const queryClient = useQueryClient()
@@ -132,12 +133,103 @@ const DiagramEditorContent = ({
   const [lastSaved, setLastSaved] = useState(null)
   const [contextMenu, setContextMenu] = useState(null)
   const [attributeModal, setAttributeModal] = useState({ isOpen: false, node: null })
+  const [linkModal, setLinkModal] = useState({ isOpen: false, node: null })
   const saveTimeoutRef = useRef(null)
   const isDirtyRef = useRef(false)
   const lastSavedDataRef = useRef(null)
 
   const nodeTypes = useMemo(() => ({ shape: ShapeNode }), [])
   const edgeTypes = useMemo(() => ({ erd: ERDEdge }), [])
+
+  // Fetch diagram links
+  const { data: diagramLinks } = useQuery(
+    ['diagram-links', diagram?.id],
+    () => diagramsAPI.getDiagramLinks(diagram.id),
+    { 
+      enabled: !!diagram?.id,
+      staleTime: 0,
+      cacheTime: 0,
+      refetchOnMount: 'always',
+      refetchOnWindowFocus: true,
+    }
+  )
+
+  // Create link mutation
+  const createLinkMutation = useMutation(
+    (linkData) => diagramsAPI.createDiagramLink(diagram.id, linkData),
+    {
+      onSuccess: async () => {
+        toast.success('Link created successfully!')
+        // Invalidate ALL diagram links queries to update incoming panels too
+        await queryClient.invalidateQueries({ queryKey: ['diagram-links'] })
+        setLinkModal({ isOpen: false, node: null })
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.detail || 'Failed to create link')
+      }
+    }
+  )
+
+  // Delete link mutation
+  const deleteLinkMutation = useMutation(
+    (linkId) => diagramsAPI.deleteDiagramLink(linkId),
+    {
+      onSuccess: async () => {
+        toast.success('Link removed')
+        // Invalidate ALL diagram links queries to update everything
+        await queryClient.invalidateQueries({ queryKey: ['diagram-links'] })
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.detail || 'Failed to remove link')
+      }
+    }
+  )
+
+  // Create a map of element IDs to their links (array - multiple links allowed)
+  // Using JSON.stringify to ensure proper dependency tracking
+  const outgoingLinksJson = JSON.stringify(diagramLinks?.outgoing || [])
+  const elementLinksMap = useMemo(() => {
+    const map = new Map()
+    const outgoing = JSON.parse(outgoingLinksJson)
+    outgoing.forEach(link => {
+      const existing = map.get(link.source_element_id) || []
+      existing.push(link)
+      map.set(link.source_element_id, existing)
+    })
+    return map
+  }, [outgoingLinksJson])
+
+  // Enrich nodes with link data (supports multiple links)
+  const enrichedNodes = useMemo(() => {
+    return nodes.map(node => {
+      const links = elementLinksMap.get(node.id)
+      // Strip old link data first to ensure clean state
+      const { linkedDiagram, linkedDiagramName, linkedDiagramType, linkId, allLinks, linkCount, ...cleanData } = node.data || {}
+      
+      if (links && links.length > 0) {
+        const firstLink = links[0]
+        return {
+          ...node,
+          data: {
+            ...cleanData,
+            linkedDiagram: firstLink.target_diagram,
+            linkedDiagramName: firstLink.target_diagram_name,
+            linkedDiagramType: firstLink.target_diagram_type,
+            linkedDiagramProject: firstLink.target_diagram_project,
+            linkId: firstLink.id,
+            allLinks: links,
+            linkCount: links.length,
+          }
+        }
+      }
+      
+      // No links - return node with clean data (no link properties)
+      return {
+        ...node,
+        data: cleanData
+      }
+    })
+  }, [nodes, elementLinksMap])
 
   // Center view on nodes after mount
   useEffect(() => {
@@ -405,6 +497,39 @@ const DiagramEditorContent = ({
     }
   }, [diagramType, isLocked, setNodes, markDirty])
 
+
+  // Handle link actions from context menu
+  const handleCreateLink = (node) => {
+    setLinkModal({ isOpen: true, node })
+    setContextMenu(null)
+  }
+
+  const handleRemoveLink = (node, linkId) => {
+    if (linkId) {
+      deleteLinkMutation.mutate(linkId)
+    }
+    setContextMenu(null)
+  }
+
+  const handleRemoveAllLinks = (node) => {
+    const links = elementLinksMap.get(node.id)
+    if (links) {
+      links.forEach(link => deleteLinkMutation.mutate(link.id))
+    }
+    setContextMenu(null)
+  }
+
+  const handleNavigateToLinked = (link) => {
+    if (link && onNavigateToDiagram) {
+      onNavigateToDiagram(link.target_diagram, link.target_diagram_project)
+    }
+    setContextMenu(null)
+  }
+
+  const handleLinkSave = (linkData) => {
+    createLinkMutation.mutate(linkData)
+  }
+
   // Actions
   const handleRenameEdge = (edge) => {
     const newLabel = window.prompt('Enter data flow name:', edge.label)
@@ -437,8 +562,14 @@ const DiagramEditorContent = ({
   const handleDelete = () => {
     markDirty()
     if (contextMenu?.type === 'node') {
-      setNodes((nds) => nds.filter((n) => n.id !== contextMenu.data.id))
-      setEdges((eds) => eds.filter((e) => e.source !== contextMenu.data.id && e.target !== contextMenu.data.id))
+      const nodeId = contextMenu.data.id
+      // Also delete all links if this node has any
+      const links = elementLinksMap.get(nodeId)
+      if (links) {
+        links.forEach(link => deleteLinkMutation.mutate(link.id))
+      }
+      setNodes((nds) => nds.filter((n) => n.id !== nodeId))
+      setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId))
     } else if (contextMenu?.type === 'edge') {
       setEdges((eds) => eds.filter((e) => e.id !== contextMenu.data.id))
     }
@@ -486,10 +617,22 @@ const DiagramEditorContent = ({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleSave])
 
+  // Listen for badge click navigation events
+  useEffect(() => {
+    const handleNavigateEvent = (e) => {
+      const { diagramId, projectId } = e.detail
+      if (diagramId && onNavigateToDiagram) {
+        onNavigateToDiagram(diagramId, projectId)
+      }
+    }
+    window.addEventListener('navigate-to-diagram', handleNavigateEvent)
+    return () => window.removeEventListener('navigate-to-diagram', handleNavigateEvent)
+  }, [onNavigateToDiagram])
+
   return (
     <>
       <ReactFlow
-        nodes={nodes} 
+        nodes={enrichedNodes} 
         edges={edges}
         onNodesChange={handleNodesChange} 
         onEdgesChange={handleEdgesChange}
@@ -513,11 +656,64 @@ const DiagramEditorContent = ({
 
       {contextMenu && (
         <div 
-          className="fixed bg-white rounded shadow-lg border py-1 z-50 text-sm min-w-[180px]" 
+          className="fixed bg-white rounded-lg shadow-xl border py-1 z-50 text-sm min-w-[220px]" 
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           {contextMenu.type === 'node' && (
             <>
+              {/* Link Actions Section */}
+              {(() => {
+                const nodeLinks = elementLinksMap.get(contextMenu.data.id)
+                if (nodeLinks && nodeLinks.length > 0) {
+                  return (
+                    <>
+                      <div className="px-3 py-1 text-xs text-gray-400 font-medium uppercase">
+                        Links ({nodeLinks.length})
+                      </div>
+                      {nodeLinks.map(link => (
+                        <div key={link.id} className="flex items-center hover:bg-gray-50">
+                          <button 
+                            onClick={() => handleNavigateToLinked(link)}
+                            className="flex-1 px-4 py-2 text-left flex items-center gap-2 text-indigo-600 hover:bg-indigo-50"
+                          >
+                            <ArrowUpRight className="w-4 h-4" />
+                            <span className="truncate">{link.target_diagram_name}</span>
+                          </button>
+                          <button 
+                            onClick={() => handleRemoveLink(contextMenu.data, link.id)}
+                            className="px-2 py-2 text-red-400 hover:text-red-600 hover:bg-red-50"
+                            title="Remove this link"
+                          >
+                            <Unlink className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                      <div className="h-px bg-gray-200 my-1"></div>
+                      <button 
+                        onClick={() => handleCreateLink(contextMenu.data)}
+                        className="w-full px-4 py-2 text-left hover:bg-indigo-50 flex items-center gap-2 text-indigo-600"
+                      >
+                        <Link2 className="w-4 h-4" />
+                        Add Another Link...
+                      </button>
+                      <div className="h-px bg-gray-200 my-1"></div>
+                    </>
+                  )
+                }
+                return (
+                  <>
+                    <button 
+                      onClick={() => handleCreateLink(contextMenu.data)}
+                      className="w-full px-4 py-2 text-left hover:bg-indigo-50 flex items-center gap-2 text-indigo-600"
+                    >
+                      <Link2 className="w-4 h-4" />
+                      Link to Diagram...
+                    </button>
+                    <div className="h-px bg-gray-200 my-1"></div>
+                  </>
+                )
+              })()}
+
               {diagramType === 'erd' && isErdEntity(contextMenu.data) && (
                 <button 
                   onClick={() => { setAttributeModal({ isOpen: true, node: contextMenu.data }); setContextMenu(null) }} 
@@ -588,6 +784,15 @@ const DiagramEditorContent = ({
         isEntity={isErdEntity(attributeModal.node)}
       />
 
+      <LinkDiagramModal
+        isOpen={linkModal.isOpen}
+        onClose={() => setLinkModal({ isOpen: false, node: null })}
+        onSave={handleLinkSave}
+        sourceNode={linkModal.node}
+        currentDiagramId={diagram?.id}
+        existingLinks={diagramLinks?.outgoing || []}
+      />
+
       {/* Save Status Indicator */}
       <div className="absolute bottom-4 right-4 z-10">
         {isSaving ? (
@@ -602,6 +807,35 @@ const DiagramEditorContent = ({
           </div>
         ) : null}
       </div>
+
+      {/* Incoming Links Panel */}
+      {(diagramLinks?.incoming?.length ?? 0) > 0 && (
+        <div className="absolute top-4 left-4 z-10 max-w-xs">
+          <div className="bg-white rounded-lg shadow-lg border overflow-hidden">
+            <div className="px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-medium flex items-center gap-2">
+              <ExternalLink className="w-3 h-3" />
+              Referenced by {diagramLinks.incoming.length} diagram{diagramLinks.incoming.length !== 1 ? 's' : ''}
+            </div>
+            <div className="max-h-32 overflow-y-auto">
+              {diagramLinks.incoming.map(link => (
+                <button
+                  key={link.id}
+                  onClick={() => onNavigateToDiagram?.(link.source_diagram, link.target_diagram_project)}
+                  className="w-full px-3 py-2 text-left hover:bg-indigo-50 flex items-center gap-2 text-sm border-b last:border-0 transition-colors"
+                >
+                  <span className="flex-1 truncate text-gray-700">
+                    {link.source_diagram_name}
+                  </span>
+                  <span className="text-xs text-gray-400 flex items-center gap-1">
+                    {link.source_element_label}
+                    <ArrowUpRight className="w-3 h-3" />
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
@@ -717,6 +951,7 @@ const DiagramEditor = (props) => {
               onEdgesChange={onEdgesChange}
               initialDataRef={initialDataRef}
               setForceSaveRef={(fn) => { forceSaveRef.current = fn }}
+              onNavigateToDiagram={props.onNavigateToDiagram}
             />
           </ReactFlowProvider>
         )}

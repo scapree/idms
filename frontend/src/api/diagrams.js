@@ -40,6 +40,32 @@ export const diagramsAPI = {
     const response = await apiClient.get(`/diagrams/${diagramId}/lock`)
     return response.data
   },
+
+  // Diagram Links
+  getDiagramLinks: async (diagramId) => {
+    const response = await apiClient.get(`/diagrams/${diagramId}/links`)
+    return response.data
+  },
+
+  createDiagramLink: async (diagramId, linkData) => {
+    const response = await apiClient.post(`/diagrams/${diagramId}/links`, linkData)
+    return response.data
+  },
+
+  deleteDiagramLink: async (linkId) => {
+    const response = await apiClient.delete(`/links/${linkId}`)
+    return response.data
+  },
+
+  getElementLinks: async (diagramId, elementId) => {
+    const response = await apiClient.get(`/diagrams/${diagramId}/elements/${elementId}/links`)
+    return response.data
+  },
+
+  getDiagramsForLinking: async () => {
+    const response = await apiClient.get('/diagrams-for-linking')
+    return response.data
+  },
 }
 
 

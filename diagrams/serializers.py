@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
-from .models import Project, Diagram, ProjectInvite, ProjectMembership
+from .models import Project, Diagram, ProjectInvite, ProjectMembership, DiagramLink
 
 
 User = get_user_model()
@@ -122,3 +122,66 @@ class ProjectMembershipSerializer(serializers.ModelSerializer):
         model = ProjectMembership
         fields = ['id', 'project', 'user', 'role', 'created_at']
         read_only_fields = ['id', 'project', 'user', 'role', 'created_at']
+
+
+class DiagramLinkSerializer(serializers.ModelSerializer):
+    source_diagram_name = serializers.CharField(source='source_diagram.name', read_only=True)
+    source_diagram_type = serializers.CharField(source='source_diagram.diagram_type', read_only=True)
+    target_diagram_name = serializers.CharField(source='target_diagram.name', read_only=True)
+    target_diagram_type = serializers.CharField(source='target_diagram.diagram_type', read_only=True)
+    target_diagram_project = serializers.IntegerField(source='target_diagram.project_id', read_only=True)
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+
+    class Meta:
+        model = DiagramLink
+        fields = [
+            'id',
+            'source_diagram',
+            'source_diagram_name',
+            'source_diagram_type',
+            'source_element_id',
+            'source_element_label',
+            'target_diagram',
+            'target_diagram_name',
+            'target_diagram_type',
+            'target_diagram_project',
+            'target_element_id',
+            'link_type',
+            'description',
+            'created_at',
+            'created_by',
+            'created_by_username',
+        ]
+        read_only_fields = [
+            'id',
+            'source_diagram_name',
+            'source_diagram_type',
+            'target_diagram_name',
+            'target_diagram_type',
+            'target_diagram_project',
+            'created_at',
+            'created_by',
+            'created_by_username',
+        ]
+
+
+class DiagramLinkCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DiagramLink
+        fields = [
+            'source_element_id',
+            'source_element_label',
+            'target_diagram',
+            'target_element_id',
+            'link_type',
+            'description',
+        ]
+
+    def validate(self, attrs):
+        source_diagram = self.context.get('source_diagram')
+        target_diagram = attrs.get('target_diagram')
+        
+        if target_diagram == source_diagram:
+            raise serializers.ValidationError({"target_diagram": "Cannot link to the same diagram."})
+        
+        return attrs

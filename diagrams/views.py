@@ -13,8 +13,10 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Diagram, Project, ProjectInvite, ProjectMembership
+from .models import Diagram, DiagramLink, Project, ProjectInvite, ProjectMembership
 from .serializers import (
+    DiagramLinkCreateSerializer,
+    DiagramLinkSerializer,
     DiagramSerializer,
     ProjectInviteInfoSerializer,
     ProjectInviteSerializer,
@@ -323,3 +325,138 @@ class AcceptInviteView(APIView):
             {"project_id": invite.project_id},
             status=status.HTTP_200_OK,
         )
+
+
+# --- Diagram Links ---
+
+class DiagramLinksView(APIView):
+    """
+    GET: List all links for a diagram (both outgoing and incoming)
+    POST: Create a new link from an element in this diagram to another diagram
+    """
+    permission_classes = [IsAuthenticated]
+
+    def _get_diagram(self, diagram_id, user):
+        diagram = get_object_or_404(Diagram, id=diagram_id)
+        _ensure_project_member(diagram.project, user)
+        return diagram
+
+    def get(self, request, diagram_id):
+        diagram = self._get_diagram(diagram_id, request.user)
+        
+        # Get outgoing links (from elements in this diagram to other diagrams)
+        outgoing = DiagramLink.objects.filter(source_diagram=diagram).select_related(
+            'target_diagram', 'created_by'
+        )
+        
+        # Get incoming links (from other diagrams pointing to this one)
+        incoming = DiagramLink.objects.filter(target_diagram=diagram).select_related(
+            'source_diagram', 'created_by'
+        )
+        
+        return Response({
+            'outgoing': DiagramLinkSerializer(outgoing, many=True).data,
+            'incoming': DiagramLinkSerializer(incoming, many=True).data,
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request, diagram_id):
+        diagram = self._get_diagram(diagram_id, request.user)
+        
+        serializer = DiagramLinkCreateSerializer(
+            data=request.data,
+            context={'request': request, 'source_diagram': diagram}
+        )
+        
+        if serializer.is_valid():
+            # Verify user has access to target diagram
+            target_diagram = serializer.validated_data['target_diagram']
+            try:
+                _ensure_project_member(target_diagram.project, request.user)
+            except PermissionDenied:
+                return Response(
+                    {"detail": "You don't have access to the target diagram."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+            
+            link = serializer.save(
+                source_diagram=diagram,
+                created_by=request.user
+            )
+            return Response(
+                DiagramLinkSerializer(link).data,
+                status=status.HTTP_201_CREATED,
+            )
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DiagramLinkDetailView(APIView):
+    """
+    GET: Get a specific link
+    DELETE: Remove a link
+    """
+    permission_classes = [IsAuthenticated]
+
+    def _get_link(self, link_id, user):
+        link = get_object_or_404(DiagramLink, id=link_id)
+        _ensure_project_member(link.source_diagram.project, user)
+        return link
+
+    def get(self, request, link_id):
+        link = self._get_link(link_id, request.user)
+        return Response(DiagramLinkSerializer(link).data, status=status.HTTP_200_OK)
+
+    def delete(self, request, link_id):
+        link = self._get_link(link_id, request.user)
+        link.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ElementLinksView(APIView):
+    """
+    GET: Get links for a specific element in a diagram
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, diagram_id, element_id):
+        diagram = get_object_or_404(Diagram, id=diagram_id)
+        _ensure_project_member(diagram.project, request.user)
+        
+        links = DiagramLink.objects.filter(
+            source_diagram=diagram,
+            source_element_id=element_id
+        ).select_related('target_diagram', 'created_by')
+        
+        return Response(DiagramLinkSerializer(links, many=True).data, status=status.HTTP_200_OK)
+
+
+class ProjectDiagramsForLinkingView(APIView):
+    """
+    GET: Get all diagrams the user can link to (from all their projects)
+    Useful for the link selection modal
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Get all projects user has access to
+        projects = Project.objects.filter(
+            memberships__user=request.user
+        ).prefetch_related('diagrams').distinct()
+        
+        result = []
+        for project in projects:
+            project_data = {
+                'id': project.id,
+                'name': project.name,
+                'diagrams': [
+                    {
+                        'id': d.id,
+                        'name': d.name,
+                        'diagram_type': d.diagram_type,
+                    }
+                    for d in project.diagrams.all()
+                ]
+            }
+            result.append(project_data)
+        
+        return Response(result, status=status.HTTP_200_OK)

@@ -22,11 +22,15 @@ from diagrams.views import (
     CurrentUserView,
     DiagramApiView,
     DiagramDetailApiView,
+    DiagramLinkDetailView,
+    DiagramLinksView,
     DiagramLockView,
+    ElementLinksView,
     InviteInfoView,
     obtain_token,
     ProjectApiView,
     ProjectDetailApiView,
+    ProjectDiagramsForLinkingView,
     ProjectInviteCreateView,
     ProjectInviteDetailView,
     ProjectInviteListView,
@@ -82,4 +86,20 @@ urlpatterns = [
     path('projects/<int:project_id>/invites/<int:invite_id>', ProjectInviteDetailView.as_view(), name='legacy_project_invite_delete'),
     path('invite/<str:token>', InviteInfoView.as_view(), name='legacy_invite_info'),
     path('invite/<str:token>/accept', AcceptInviteView.as_view(), name='legacy_invite_accept'),
+
+    # Diagram Links
+    path('api/diagrams/<int:diagram_id>/links', DiagramLinksView.as_view(), name='diagram_links'),
+    path('api/diagrams/<int:diagram_id>/links/', DiagramLinksView.as_view(), name='diagram_links_slash'),
+    path('api/diagrams/<int:diagram_id>/elements/<str:element_id>/links', ElementLinksView.as_view(), name='element_links'),
+    path('api/links/<int:link_id>', DiagramLinkDetailView.as_view(), name='link_detail'),
+    path('api/links/<int:link_id>/', DiagramLinkDetailView.as_view(), name='link_detail_slash'),
+    path('api/diagrams-for-linking', ProjectDiagramsForLinkingView.as_view(), name='diagrams_for_linking'),
+    path('api/diagrams-for-linking/', ProjectDiagramsForLinkingView.as_view(), name='diagrams_for_linking_slash'),
+
+    # Legacy diagram link aliases  
+    path('diagrams/<int:diagram_id>/links', DiagramLinksView.as_view(), name='legacy_diagram_links'),
+    path('diagrams/<int:diagram_id>/links/', DiagramLinksView.as_view(), name='legacy_diagram_links_slash'),
+    path('diagrams/<int:diagram_id>/elements/<str:element_id>/links', ElementLinksView.as_view(), name='legacy_element_links'),
+    path('links/<int:link_id>', DiagramLinkDetailView.as_view(), name='legacy_link_detail'),
+    path('diagrams-for-linking', ProjectDiagramsForLinkingView.as_view(), name='legacy_diagrams_for_linking'),
 ]

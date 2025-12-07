@@ -96,10 +96,47 @@ class Diagram(models.Model):
     locked_at = models.DateTimeField(null=True, blank=True)
 
 
-class Relation(models.Model):
-    diagram = models.ForeignKey(Diagram, on_delete=models.CASCADE, related_name='source')
-    element_id = models.CharField(max_length=100)
-    target_diagram = models.ForeignKey(Diagram, on_delete=models.CASCADE, related_name='target')
-    tagret_element_id = models.CharField(max_length=100, null=True)
-    relation_type = models.CharField(max_length=100)
+class DiagramLink(models.Model):
+    """
+    Links between diagram elements.
+    An element in source_diagram can link to another diagram (target_diagram),
+    creating a navigation network between diagrams.
+    """
+    LINK_TYPES = [
+        ('reference', 'Reference'),  # General reference
+        ('decomposition', 'Decomposition'),  # Element breaks down into sub-diagram
+        ('implementation', 'Implementation'),  # Element implemented by another diagram
+        ('data_source', 'Data Source'),  # Points to data structure (e.g., BPMN DB -> ERD)
+    ]
+
+    source_diagram = models.ForeignKey(
+        Diagram,
+        on_delete=models.CASCADE,
+        related_name='outgoing_links'
+    )
+    source_element_id = models.CharField(max_length=100)
+    source_element_label = models.CharField(max_length=255, blank=True, default='')
+    
+    target_diagram = models.ForeignKey(
+        Diagram,
+        on_delete=models.CASCADE,
+        related_name='incoming_links'
+    )
+    target_element_id = models.CharField(max_length=100, null=True, blank=True)
+    
+    link_type = models.CharField(max_length=50, choices=LINK_TYPES, default='reference')
+    description = models.TextField(blank=True, default='')
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='created_links'
+    )
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.source_diagram.name}:{self.source_element_id} → {self.target_diagram.name}'
 

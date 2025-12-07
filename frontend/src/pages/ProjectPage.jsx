@@ -228,6 +228,34 @@ const ProjectPage = () => {
     toast.success('Invite link copied to clipboard!')
   }
 
+  // Handle navigation to linked diagrams
+  const handleNavigateToDiagram = async (targetDiagramId, targetProjectId) => {
+    // If it's in a different project, navigate there
+    if (targetProjectId && targetProjectId !== parseInt(projectId)) {
+      navigate(`/projects/${targetProjectId}`)
+      // Note: The diagram selection will need to happen after project loads
+      toast.success('Navigating to linked diagram in another project...')
+      return
+    }
+
+    // Same project - find and select the diagram
+    const targetDiagram = diagrams.find(d => d.id === targetDiagramId)
+    if (targetDiagram) {
+      await handleSelectDiagram(targetDiagram)
+      toast.success(`Navigated to "${targetDiagram.name}"`)
+    } else {
+      // Diagram might not be in cache, fetch it
+      try {
+        const freshDiagram = await diagramsAPI.getDiagram(targetDiagramId)
+        setSelectedDiagram(freshDiagram)
+        queryClient.invalidateQueries(['diagrams', projectId])
+        toast.success(`Navigated to "${freshDiagram.name}"`)
+      } catch (e) {
+        toast.error('Failed to navigate to linked diagram')
+      }
+    }
+  }
+
   const lockedByCurrentUser = Boolean(
     diagramLock && user && diagramLock.user?.id === user.id
   )
@@ -327,6 +355,7 @@ const ProjectPage = () => {
               lockUser={lockOwnerLabel}
               connectionType={connectionType}
               setForceSaveRef={(fn) => { diagramForceSaveRef.current = fn }}
+              onNavigateToDiagram={handleNavigateToDiagram}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center bg-gray-50">
