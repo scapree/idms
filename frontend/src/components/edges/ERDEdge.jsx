@@ -1,5 +1,5 @@
 import React from 'react'
-import { BaseEdge, EdgeLabelRenderer, getStraightPath } from 'reactflow'
+import { BaseEdge, EdgeLabelRenderer, getStraightPath, getBezierPath, getSmoothStepPath } from 'reactflow'
 
 // Размер маркера (символа)
 const MARKER_SIZE = 14
@@ -9,7 +9,7 @@ const MARKER_SIZE = 14
  * 0,0 - это точка касания с узлом (Entity).
  * Ось X идет ОТ узла ВДОЛЬ линии.
  */
-const ERDMarkerSymbol = ({ cardinality, optional }) => {
+const ERDMarkerSymbol = ({ cardinality, optional, isIdentifying }) => {
   const strokeColor = 'currentColor'
   const strokeWidth = 2
 
@@ -80,6 +80,21 @@ const ERDMarkerSymbol = ({ cardinality, optional }) => {
   )
 }
 
+/**
+ * Получить путь в зависимости от типа
+ */
+const getPathByType = (pathType, params) => {
+  switch (pathType) {
+    case 'bezier':
+      return getBezierPath(params)
+    case 'smoothstep':
+      return getSmoothStepPath(params)
+    case 'straight':
+    default:
+      return getStraightPath(params)
+  }
+}
+
 const ERDEdge = ({
   id,
   sourceX,
@@ -93,14 +108,23 @@ const ERDEdge = ({
   labelShowBg = true,
   labelBgStyle,
   labelBgBorderRadius,
+  selected,
 }) => {
+  // Получаем настройки из data
+  const pathType = data?.pathType || 'straight' // 'straight', 'bezier', 'smoothstep'
+  const isIdentifying = data?.isIdentifying ?? true // true = solid, false = dashed
+  const relationshipName = data?.relationshipName || label || ''
+  const roleName = data?.roleName || ''
+  
   // 1. Вычисляем путь линии
-  const [edgePath, labelX, labelY] = getStraightPath({
+  const pathParams = {
     sourceX,
     sourceY,
     targetX,
     targetY,
-  })
+  }
+  
+  const [edgePath, labelX, labelY] = getPathByType(pathType, pathParams)
 
   // 2. Вычисляем угол наклона линии
   // angle - это угол вектора от Source к Target
@@ -113,58 +137,108 @@ const ERDEdge = ({
   const targetCardinality = data?.targetCardinality || 'many'
   const targetOptional = data?.targetOptional || false
 
-  const edgeColor = style.stroke || '#000'
+  // Цвет линии
+  const defaultColor = isIdentifying ? '#1f2937' : '#6b7280'
+  const edgeColor = style.stroke || defaultColor
+  const strokeWidth = style.strokeWidth || 2
+  
+  // Стиль линии (пунктир для non-identifying)
+  const strokeDasharray = isIdentifying ? undefined : '8,4'
+  
+  // Стиль для выделенной связи
+  const selectedStyle = selected ? {
+    filter: 'drop-shadow(0 0 4px rgba(59, 130, 246, 0.5))',
+  } : {}
 
   // Стили для метки
   const computedLabelStyle = {
     position: 'absolute',
     transform: 'translate(-50%, -50%)',
     pointerEvents: 'auto',
-    fontSize: '12px',
-    fontWeight: 600,
-    background: labelShowBg ? (labelBgStyle?.fill || 'rgba(255, 255, 255, 0.9)') : 'transparent',
-    padding: labelShowBg ? '4px 8px' : 0,
+    fontSize: '11px',
+    fontWeight: 500,
+    background: labelShowBg ? (labelBgStyle?.fill || 'rgba(255, 255, 255, 0.95)') : 'transparent',
+    padding: labelShowBg ? '3px 8px' : 0,
     borderRadius: labelBgBorderRadius || 4,
+    border: labelShowBg ? '1px solid #e5e7eb' : 'none',
+    boxShadow: labelShowBg ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+    color: '#374151',
     ...labelStyle,
   }
 
+  // Вычисляем позицию для роли (чуть выше основной метки)
+  const roleOffset = relationshipName ? -16 : 0
+
   return (
     <>
-      {/* Сама линия. Рисуем её чуть короче визуально, чтобы она не перекрывала маркеры, 
-          но BaseEdge рисует полный путь. Маркеры лягут сверху. */}
-      <BaseEdge path={edgePath} style={{ ...style, strokeWidth: 2 }} />
+      {/* Сама линия */}
+      <BaseEdge 
+        path={edgePath} 
+        style={{ 
+          ...style, 
+          stroke: edgeColor,
+          strokeWidth,
+          strokeDasharray,
+          ...selectedStyle,
+        }} 
+      />
+      
+      {/* Невидимая толстая линия для лучшего hover/click */}
+      <path
+        d={edgePath}
+        fill="none"
+        stroke="transparent"
+        strokeWidth={20}
+        style={{ cursor: 'pointer' }}
+      />
 
       {/* --- SOURCE MARKER --- */}
-      {/* Угол angle смотрит от Source к Target. 
-          Нам нужно, чтобы ось X маркера шла ОТ Source ВДОЛЬ линии. 
-          Это как раз совпадает с направлением angle. */}
       <g
         transform={`translate(${sourceX}, ${sourceY}) rotate(${angle})`}
         style={{ color: edgeColor }}
       >
         <ERDMarkerSymbol 
-            cardinality={sourceCardinality} 
-            optional={sourceOptional} 
+          cardinality={sourceCardinality} 
+          optional={sourceOptional}
+          isIdentifying={isIdentifying}
         />
       </g>
 
       {/* --- TARGET MARKER --- */}
-      {/* Угол angle смотрит В Target. 
-          Нам нужно, чтобы ось X маркера шла ОТ Target ВДОЛЬ линии (обратно к Source).
-          Поэтому поворачиваем на angle + 180. */}
       <g
         transform={`translate(${targetX}, ${targetY}) rotate(${angle + 180})`}
         style={{ color: edgeColor }}
       >
         <ERDMarkerSymbol 
-            cardinality={targetCardinality} 
-            optional={targetOptional} 
+          cardinality={targetCardinality} 
+          optional={targetOptional}
+          isIdentifying={isIdentifying}
         />
       </g>
 
-      {/* Текстовая метка */}
-      {label && (
-        <EdgeLabelRenderer>
+      {/* Метки связи */}
+      <EdgeLabelRenderer>
+        {/* Имя роли (если есть) */}
+        {roleName && (
+          <div
+            style={{
+              ...computedLabelStyle,
+              left: labelX,
+              top: labelY + roleOffset,
+              fontSize: '10px',
+              color: '#6b7280',
+              fontStyle: 'italic',
+              background: 'rgba(255, 255, 255, 0.9)',
+              padding: '2px 6px',
+            }}
+            className="nodrag nopan"
+          >
+            {roleName}
+          </div>
+        )}
+        
+        {/* Имя связи / кардинальность */}
+        {(relationshipName || data?.showCardinality) && (
           <div
             style={{
               ...computedLabelStyle,
@@ -173,10 +247,28 @@ const ERDEdge = ({
             }}
             className="nodrag nopan"
           >
-            {label}
+            {relationshipName || `${sourceCardinality === 'many' ? 'N' : '1'}:${targetCardinality === 'many' ? 'N' : '1'}`}
           </div>
-        </EdgeLabelRenderer>
-      )}
+        )}
+        
+        {/* Индикатор типа связи (identifying/non-identifying) */}
+        {!isIdentifying && !relationshipName && (
+          <div
+            style={{
+              position: 'absolute',
+              left: labelX,
+              top: labelY + 12,
+              transform: 'translate(-50%, -50%)',
+              fontSize: '9px',
+              color: '#9ca3af',
+              fontStyle: 'italic',
+            }}
+            className="nodrag nopan"
+          >
+            non-identifying
+          </div>
+        )}
+      </EdgeLabelRenderer>
     </>
   )
 }

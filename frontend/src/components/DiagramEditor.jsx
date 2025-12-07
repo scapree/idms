@@ -14,7 +14,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { useMutation, useQueryClient, useQuery } from 'react-query'
 import { diagramsAPI } from '../api'
-import { Save, CheckCircle2, Link2, ExternalLink, Unlink, ArrowUpRight, Edit, Trash2 } from 'lucide-react'
+import { Save, CheckCircle2, Link2, ExternalLink, Unlink, ArrowUpRight, Edit, Trash2, Palette } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ShapeNode from './nodes/ShapeNode'
 import ERDEdge from './edges/ERDEdge'
@@ -27,6 +27,17 @@ import ExportModal from './ExportModal'
 const createUniqueId = (prefix = 'id') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 const isErdEntity = (node) => node?.data?.shape === 'entity'
 
+// Цвета для ERD сущностей
+const ERD_ENTITY_COLORS = [
+  { id: 'blue', name: 'Синий', color: '#2563eb' },
+  { id: 'green', name: 'Зелёный', color: '#16a34a' },
+  { id: 'purple', name: 'Фиолетовый', color: '#7c3aed' },
+  { id: 'orange', name: 'Оранжевый', color: '#ea580c' },
+  { id: 'rose', name: 'Розовый', color: '#e11d48' },
+  { id: 'teal', name: 'Бирюзовый', color: '#0d9488' },
+  { id: 'gray', name: 'Серый', color: '#6b7280' },
+]
+
 // --- ERD SETTINGS ---
 const ERD_PRESETS = {
   '1:1': { sourceCardinality: 'one', targetCardinality: 'one' },
@@ -38,11 +49,12 @@ const DEFAULT_ERD_CONNECTION = ERD_PRESETS['1:N']
 
 const getConnectionData = (type) => {
   const map = {
-    'erd-one-to-one': ERD_PRESETS['1:1'],
-    'erd-one-to-many': ERD_PRESETS['1:N'],
-    'erd-many-to-many': ERD_PRESETS['M:N'],
+    'erd-one-to-one': { ...ERD_PRESETS['1:1'], isIdentifying: true },
+    'erd-one-to-many': { ...ERD_PRESETS['1:N'], isIdentifying: true },
+    'erd-many-to-one': { ...ERD_PRESETS['N:1'], isIdentifying: true },
+    'erd-many-to-many': { ...ERD_PRESETS['M:N'], isIdentifying: false },
   }
-  return map[type] || DEFAULT_ERD_CONNECTION
+  return map[type] || { ...DEFAULT_ERD_CONNECTION, isIdentifying: true }
 }
 
 // Parse diagram data safely
@@ -451,10 +463,76 @@ const DiagramEditorContent = ({
         data: {
           sourceCardinality: connSettings.sourceCardinality,
           targetCardinality: connSettings.targetCardinality,
+          isIdentifying: connSettings.isIdentifying ?? true,
+          sourceOptional: false,
+          targetOptional: false,
+          relationshipName: '',
+          showCardinality: true,
         },
-        style: { stroke: '#333', strokeWidth: 2 },
+        style: { stroke: '#1f2937', strokeWidth: 2 },
       }
       setEdges((eds) => addEdge(newEdge, eds))
+      
+      // Автоматическое создание FK в target entity
+      // Находим source и target nodes
+      const sourceNode = nodes.find(n => n.id === params.source)
+      const targetNode = nodes.find(n => n.id === params.target)
+      
+      if (sourceNode && targetNode && isErdEntity(sourceNode) && isErdEntity(targetNode)) {
+        // Получаем PK из source entity
+        const sourcePKs = (sourceNode.data?.attributes || []).filter(attr => 
+          typeof attr === 'object' && attr.primary
+        )
+        
+        if (sourcePKs.length > 0) {
+          // Спрашиваем пользователя, хочет ли он создать FK
+          const shouldCreateFK = window.confirm(
+            `Создать Foreign Key в "${targetNode.data?.label}" ссылающийся на PK "${sourceNode.data?.label}"?`
+          )
+          
+          if (shouldCreateFK) {
+            // Создаем FK атрибуты в target entity
+            const newFKAttributes = sourcePKs.map(pk => ({
+              name: `${sourceNode.data?.label?.toLowerCase() || 'entity'}_${pk.name}`,
+              type: pk.type || 'INT',
+              size: pk.size || '',
+              primary: false,
+              foreignKey: {
+                entityId: sourceNode.id,
+                entityName: sourceNode.data?.label || 'Entity',
+                attributeName: pk.name,
+              },
+              nullable: connSettings.targetOptional || false,
+              unique: connSettings.targetCardinality === 'one',
+              default: '',
+            }))
+            
+            // Обновляем target node с новыми FK атрибутами
+            setNodes(nds => nds.map(n => {
+              if (n.id === targetNode.id) {
+                const existingAttrs = n.data?.attributes || []
+                // Проверяем, нет ли уже такого FK
+                const newAttrs = newFKAttributes.filter(fk => 
+                  !existingAttrs.some(attr => 
+                    typeof attr === 'object' && 
+                    attr.foreignKey?.entityId === fk.foreignKey.entityId &&
+                    attr.foreignKey?.attributeName === fk.foreignKey.attributeName
+                  )
+                )
+                return {
+                  ...n,
+                  data: {
+                    ...n.data,
+                    attributes: [...existingAttrs, ...newAttrs],
+                  }
+                }
+              }
+              return n
+            }))
+          }
+        }
+      }
+      
       return
     }
 
@@ -467,7 +545,7 @@ const DiagramEditorContent = ({
       }
       return addEdge(mergedParams, eds)
     })
-  }, [diagramType, connectionType, isLocked, getEdgeConfig, setEdges, markDirty])
+  }, [diagramType, connectionType, isLocked, getEdgeConfig, setEdges, setNodes, nodes, markDirty])
 
   const onDrop = useCallback((event) => {
     event.preventDefault()
@@ -1059,13 +1137,42 @@ const DiagramEditorContent = ({
               })()}
 
               {diagramType === 'erd' && isErdEntity(contextMenu.data) && (
-                <button 
-                  onClick={() => { setAttributeModal({ isOpen: true, node: contextMenu.data }); setContextMenu(null) }} 
-                  className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
-                >
-                  <Edit className="w-4 h-4" />
-                  Редактировать атрибуты
-                </button>
+                <>
+                  <button 
+                    onClick={() => { setAttributeModal({ isOpen: true, node: contextMenu.data }); setContextMenu(null) }} 
+                    className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Редактировать атрибуты
+                  </button>
+                  
+                  {/* Выбор цвета сущности */}
+                  <div className="px-3 py-1.5 text-xs text-gray-500 font-medium uppercase tracking-wide bg-gray-50 flex items-center gap-1">
+                    <Palette className="w-3 h-3" />
+                    Цвет
+                  </div>
+                  <div className="px-3 py-2 flex flex-wrap gap-1.5">
+                    {ERD_ENTITY_COLORS.map(colorDef => (
+                      <button
+                        key={colorDef.id}
+                        onClick={() => {
+                          markDirty()
+                          setNodes(nds => nds.map(n => n.id === contextMenu.data.id ? {
+                            ...n,
+                            data: { ...n.data, borderColor: colorDef.color }
+                          } : n))
+                          setContextMenu(null)
+                        }}
+                        className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                          contextMenu.data.data?.borderColor === colorDef.color ? 'ring-2 ring-offset-1 ring-gray-400' : 'border-white'
+                        }`}
+                        style={{ backgroundColor: colorDef.color }}
+                        title={colorDef.name}
+                      />
+                    ))}
+                  </div>
+                  <div className="h-px bg-gray-100 my-1"></div>
+                </>
               )}
               <button 
                 onClick={() => {
@@ -1096,13 +1203,100 @@ const DiagramEditorContent = ({
               )}
               {diagramType === 'erd' && (
                 <>
+                  {/* Имя связи */}
+                  <button 
+                    onClick={() => {
+                      const name = window.prompt('Название связи:', contextMenu.data.data?.relationshipName || '')
+                      if (name !== null) {
+                        markDirty()
+                        setEdges(eds => eds.map(e => e.id === contextMenu.data.id ? {
+                          ...e,
+                          data: { ...e.data, relationshipName: name }
+                        } : e))
+                      }
+                      setContextMenu(null)
+                    }}
+                    className="w-full px-3 py-2 text-left hover:bg-gray-50 text-gray-700"
+                  >
+                    Название связи...
+                  </button>
+
+                  <div className="h-px bg-gray-100 my-1"></div>
+                  
+                  {/* Кардинальность */}
                   <div className="px-3 py-1.5 text-xs text-gray-500 font-medium uppercase tracking-wide bg-gray-50">
                     Кардинальность
                   </div>
-                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, '1:1')} className="w-full px-3 py-2 text-left hover:bg-gray-50 text-gray-700">Один к одному (1:1)</button>
-                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, '1:N')} className="w-full px-3 py-2 text-left hover:bg-gray-50 text-gray-700">Один ко многим (1:N)</button>
-                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, 'N:1')} className="w-full px-3 py-2 text-left hover:bg-gray-50 text-gray-700">Многие к одному (N:1)</button>
-                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, 'M:N')} className="w-full px-3 py-2 text-left hover:bg-gray-50 text-gray-700">Многие ко многим (M:N)</button>
+                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, '1:1')} className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${contextMenu.data.data?.sourceCardinality === 'one' && contextMenu.data.data?.targetCardinality === 'one' ? 'text-primary-600 font-medium bg-primary-50' : 'text-gray-700'}`}>Один к одному (1:1)</button>
+                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, '1:N')} className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${contextMenu.data.data?.sourceCardinality === 'one' && contextMenu.data.data?.targetCardinality === 'many' ? 'text-primary-600 font-medium bg-primary-50' : 'text-gray-700'}`}>Один ко многим (1:N)</button>
+                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, 'N:1')} className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${contextMenu.data.data?.sourceCardinality === 'many' && contextMenu.data.data?.targetCardinality === 'one' ? 'text-primary-600 font-medium bg-primary-50' : 'text-gray-700'}`}>Многие к одному (N:1)</button>
+                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, 'M:N')} className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${contextMenu.data.data?.sourceCardinality === 'many' && contextMenu.data.data?.targetCardinality === 'many' ? 'text-primary-600 font-medium bg-primary-50' : 'text-gray-700'}`}>Многие ко многим (M:N)</button>
+                  
+                  <div className="h-px bg-gray-100 my-1"></div>
+                  
+                  {/* Тип связи */}
+                  <div className="px-3 py-1.5 text-xs text-gray-500 font-medium uppercase tracking-wide bg-gray-50">
+                    Тип связи
+                  </div>
+                  <button 
+                    onClick={() => {
+                      markDirty()
+                      setEdges(eds => eds.map(e => e.id === contextMenu.data.id ? {
+                        ...e,
+                        data: { ...e.data, isIdentifying: true }
+                      } : e))
+                      setContextMenu(null)
+                    }}
+                    className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${contextMenu.data.data?.isIdentifying !== false ? 'text-primary-600 font-medium bg-primary-50' : 'text-gray-700'}`}
+                  >
+                    Идентифицирующая (—)
+                  </button>
+                  <button 
+                    onClick={() => {
+                      markDirty()
+                      setEdges(eds => eds.map(e => e.id === contextMenu.data.id ? {
+                        ...e,
+                        data: { ...e.data, isIdentifying: false }
+                      } : e))
+                      setContextMenu(null)
+                    }}
+                    className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${contextMenu.data.data?.isIdentifying === false ? 'text-primary-600 font-medium bg-primary-50' : 'text-gray-700'}`}
+                  >
+                    Неидентифицирующая (- - -)
+                  </button>
+                  
+                  <div className="h-px bg-gray-100 my-1"></div>
+                  
+                  {/* Опциональность */}
+                  <div className="px-3 py-1.5 text-xs text-gray-500 font-medium uppercase tracking-wide bg-gray-50">
+                    Опциональность
+                  </div>
+                  <button 
+                    onClick={() => {
+                      markDirty()
+                      setEdges(eds => eds.map(e => e.id === contextMenu.data.id ? {
+                        ...e,
+                        data: { ...e.data, sourceOptional: !e.data?.sourceOptional }
+                      } : e))
+                      setContextMenu(null)
+                    }}
+                    className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${contextMenu.data.data?.sourceOptional ? 'text-primary-600 font-medium bg-primary-50' : 'text-gray-700'}`}
+                  >
+                    {contextMenu.data.data?.sourceOptional ? '✓ ' : ''}Source опционален (○)
+                  </button>
+                  <button 
+                    onClick={() => {
+                      markDirty()
+                      setEdges(eds => eds.map(e => e.id === contextMenu.data.id ? {
+                        ...e,
+                        data: { ...e.data, targetOptional: !e.data?.targetOptional }
+                      } : e))
+                      setContextMenu(null)
+                    }}
+                    className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${contextMenu.data.data?.targetOptional ? 'text-primary-600 font-medium bg-primary-50' : 'text-gray-700'}`}
+                  >
+                    {contextMenu.data.data?.targetOptional ? '✓ ' : ''}Target опционален (○)
+                  </button>
                 </>
               )}
             </>
@@ -1127,8 +1321,9 @@ const DiagramEditorContent = ({
         isOpen={attributeModal.isOpen}
         onClose={() => setAttributeModal({ isOpen: false, node: null })}
         onSave={handleAttributeSave}
-        nodeData={attributeModal.node?.data}
+        nodeData={attributeModal.node ? { ...attributeModal.node.data, id: attributeModal.node.id } : null}
         isEntity={isErdEntity(attributeModal.node)}
+        allEntities={nodes.filter(n => isErdEntity(n))}
       />
 
       <LinkDiagramModal

@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { Handle, Position } from 'reactflow'
 import * as Icons from 'lucide-react'
-import { ExternalLink, Link2, Layers, Code, Database } from 'lucide-react'
+import { ExternalLink, Link2, Layers, Code, Database, Key } from 'lucide-react'
 
 const DEFAULT_TEXT_STYLES = {
   fontWeight: 600,
@@ -177,6 +177,14 @@ const ShapeNode = ({ data = {} }) => {
     </div>
   )
 
+  // Helper to render type with size
+  const renderTypeWithSize = (attr) => {
+    if (attr.size && ['VARCHAR', 'CHAR', 'DECIMAL'].includes(attr.type)) {
+      return `${attr.type}(${attr.size})`
+    }
+    return attr.type || 'VARCHAR'
+  }
+
   // --- RENDERERS ---
 
   const renderRectangle = () => (
@@ -194,26 +202,89 @@ const ShapeNode = ({ data = {} }) => {
       >
         {/* Support for ERD Header style entities */}
         {shape === 'entity' && (
-             <div className="px-3 py-2 text-xs font-bold uppercase tracking-wider" style={{ backgroundColor: borderColor, color: '#fff' }}>
-                {label}
-             </div>
+          <div 
+            className="px-3 py-2 text-sm font-bold tracking-wide flex items-center justify-between" 
+            style={{ backgroundColor: borderColor, color: '#fff' }}
+          >
+            <span className="truncate">{label}</span>
+            <Database className="w-4 h-4 opacity-70 flex-shrink-0" />
+          </div>
         )}
-        <div className="flex-1 flex items-center justify-center p-2">
-            {shape === 'entity' ? (
-                <div className="w-full space-y-1">
-                    {data.attributes?.map((attr, i) => (
-                        <div key={i} className="text-sm border-b last:border-0 border-gray-100 py-1 flex justify-between">
-                            <span className={attr.primary ? "font-bold underline" : ""}>{attr.name}</span>
-                            {attr.primary && <span className="text-xs text-orange-500 font-bold">PK</span>}
+        <div className="flex-1 flex items-center justify-center">
+          {shape === 'entity' ? (
+            <div className="w-full">
+              {/* Attributes list */}
+              {data.attributes?.length > 0 ? (
+                <div className="divide-y divide-gray-100">
+                  {data.attributes.map((attr, i) => {
+                    const attrName = typeof attr === 'string' ? attr : attr.name
+                    const isPrimary = typeof attr === 'object' && attr.primary
+                    const isForeignKey = typeof attr === 'object' && attr.foreignKey
+                    const isUnique = typeof attr === 'object' && attr.unique && !isPrimary
+                    const isNullable = typeof attr === 'object' ? attr.nullable : true
+                    const attrType = typeof attr === 'object' ? renderTypeWithSize(attr) : ''
+                    
+                    return (
+                      <div 
+                        key={i} 
+                        className={`px-3 py-1.5 flex items-center gap-2 text-sm ${
+                          isPrimary ? 'bg-amber-50' : isForeignKey ? 'bg-blue-50' : ''
+                        }`}
+                      >
+                        {/* Key indicators */}
+                        <div className="flex items-center gap-0.5 w-8 flex-shrink-0">
+                          {isPrimary && (
+                            <Key className="w-3.5 h-3.5 text-amber-500" title="Primary Key" />
+                          )}
+                          {isForeignKey && (
+                            <Link2 className="w-3.5 h-3.5 text-blue-500" title={`FK → ${attr.foreignKey.entityName}.${attr.foreignKey.attributeName}`} />
+                          )}
                         </div>
-                    ))}
-                    {(!data.attributes || data.attributes.length === 0) && (
-                        <div className="text-xs text-gray-400 italic text-center">ПКМ для добавления</div>
-                    )}
+                        
+                        {/* Attribute name */}
+                        <span className={`flex-1 truncate ${
+                          isPrimary ? 'font-bold text-amber-800 underline decoration-amber-400' : 
+                          isForeignKey ? 'font-medium text-blue-700' : 
+                          'text-gray-800'
+                        }`}>
+                          {attrName}
+                        </span>
+                        
+                        {/* Type */}
+                        {attrType && (
+                          <span className="text-xs font-mono text-gray-400 flex-shrink-0">
+                            {attrType}
+                          </span>
+                        )}
+                        
+                        {/* Constraints badges */}
+                        <div className="flex items-center gap-1 flex-shrink-0">
+                          {isUnique && (
+                            <span className="text-[9px] px-1 py-0.5 rounded bg-purple-100 text-purple-600 font-bold">
+                              UQ
+                            </span>
+                          )}
+                          {!isNullable && !isPrimary && (
+                            <span className="text-[9px] px-1 py-0.5 rounded bg-red-100 text-red-600 font-bold">
+                              NN
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
-            ) : (
-                renderContentInner()
-            )}
+              ) : (
+                <div className="text-xs text-gray-400 italic text-center py-4 px-2">
+                  Двойной клик или ПКМ для добавления атрибутов
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="p-2">
+              {renderContentInner()}
+            </div>
+          )}
         </div>
       </div>
       {!showLabelInside && labelPosition === 'bottom' && renderLabel('bottom')}

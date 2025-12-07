@@ -7,7 +7,7 @@ import {
   User, Cog, FileCode, Hand, Send, Download, Scale, PhoneCall, Library,
   X, Plus, CircleDot, Equal, Files, ArrowDownToLine, ArrowUpFromLine,
   StickyNote, LayoutPanelTop, LayoutPanelLeft, Slash, ArrowUpRight, ArrowBigRight,
-  StretchHorizontal
+  StretchHorizontal, Table, ArrowLeft, ArrowLeftRight
 } from 'lucide-react'
 import * as Icons from 'lucide-react'
 
@@ -181,26 +181,80 @@ const buildBpmnGroups = () => {
 // ERD CONFIGURATION
 // ==========================================
 
+// Доступные цвета для сущностей (используется в контекстном меню)
+export const ERD_ENTITY_COLORS = [
+  { id: 'blue', name: 'Синий', color: '#2563eb' },
+  { id: 'green', name: 'Зелёный', color: '#16a34a' },
+  { id: 'purple', name: 'Фиолетовый', color: '#7c3aed' },
+  { id: 'orange', name: 'Оранжевый', color: '#ea580c' },
+  { id: 'rose', name: 'Розовый', color: '#e11d48' },
+  { id: 'teal', name: 'Бирюзовый', color: '#0d9488' },
+  { id: 'gray', name: 'Серый', color: '#6b7280' },
+]
+
+const ERD_CONNECTORS = [
+  { 
+    id: 'erd-one-to-one', 
+    name: 'Один к одному (1:1)', 
+    connectionType: 'erd-one-to-one', 
+    description: 'Identifying relationship',
+    icon: 'Equal',
+    cardinality: '1:1',
+  },
+  { 
+    id: 'erd-one-to-many', 
+    name: 'Один ко многим (1:N)', 
+    connectionType: 'erd-one-to-many', 
+    description: 'Родитель → Дети',
+    icon: 'ArrowRight',
+    cardinality: '1:N',
+  },
+  { 
+    id: 'erd-many-to-one', 
+    name: 'Многие к одному (N:1)', 
+    connectionType: 'erd-many-to-one', 
+    description: 'Дети → Родитель',
+    icon: 'ArrowLeft',
+    cardinality: 'N:1',
+  },
+  { 
+    id: 'erd-many-to-many', 
+    name: 'Многие ко многим (M:N)', 
+    connectionType: 'erd-many-to-many', 
+    description: 'Требует промежуточную таблицу',
+    icon: 'ArrowLeftRight',
+    cardinality: 'M:N',
+  },
+]
+
 const buildErdConfiguration = () => {
   const entities = [
     {
       id: 'erd-entity',
       name: 'Сущность',
-      paletteIcon: 'Square',
+      paletteIcon: 'Table',
       previewColor: '#2563eb',
       nodeConfig: {
-        label: 'Сущность', shape: 'entity', width: 200, height: 160,
-        background: '#ffffff', borderColor: '#2563eb', borderWidth: 2,
-        textColor: '#0f172a', attributes: [],
+        label: 'Сущность', 
+        shape: 'entity', 
+        width: 220, 
+        height: 160,
+        background: '#ffffff', 
+        borderColor: '#2563eb', 
+        borderWidth: 2,
+        textColor: '#0f172a', 
+        attributes: [],
         handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
       },
     },
   ]
 
   return {
-    groups: [{ title: 'Сущности', items: entities }],
-    connectorsTitle: null,
-    connectors: [],
+    groups: [
+      { title: 'Сущности', items: entities },
+    ],
+    connectorsTitle: 'Типы связей (Кардинальность)',
+    connectors: ERD_CONNECTORS,
   }
 }
 
