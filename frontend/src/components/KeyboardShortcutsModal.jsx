@@ -6,6 +6,7 @@ const shortcutGroups = [
     title: 'General',
     shortcuts: [
       { keys: ['Ctrl', 'S'], description: 'Save diagram' },
+      { keys: ['Ctrl', 'E'], description: 'Export diagram' },
       { keys: ['?'], description: 'Show keyboard shortcuts' },
       { keys: ['Esc'], description: 'Deselect all / Close modal' },
     ]

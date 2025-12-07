@@ -6,8 +6,9 @@ import Layout from '../components/Layout'
 import DiagramEditor from '../components/DiagramEditor'
 import DiagramTree from '../components/DiagramTree'
 import DiagramPalette from '../components/DiagramPalette'
+import ExportModal from '../components/ExportModal'
 import { useAuth } from '../hooks/useAuth'
-import { ArrowLeft, Plus, FileText, Share2, Copy, X } from 'lucide-react'
+import { ArrowLeft, Plus, FileText, Share2, Copy, X, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const ProjectPage = () => {
@@ -22,6 +23,7 @@ const ProjectPage = () => {
   const [connectionType, setConnectionType] = useState('sequence-flow')
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [inviteLink, setInviteLink] = useState('')
+  const [showExportModal, setShowExportModal] = useState(false)
   const { user } = useAuth()
   const heldLockRef = useRef(null)
   const diagramForceSaveRef = useRef(null)
@@ -311,6 +313,15 @@ const ProjectPage = () => {
             </span>
           )}
           <button
+            onClick={() => setShowExportModal(true)}
+            disabled={!selectedDiagram}
+            className="btn btn-secondary btn-sm"
+            title={selectedDiagram ? 'Export diagram' : 'Select a diagram to export'}
+          >
+            <Download className="h-4 w-4 mr-1" />
+            Export
+          </button>
+          <button
             onClick={handleCreateInvite}
             disabled={createInviteMutation.isLoading}
             className="btn btn-secondary btn-sm"
@@ -484,6 +495,16 @@ const ProjectPage = () => {
           </div>
         </div>
       )}
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        diagramName={selectedDiagram?.name}
+        projectName={project?.name}
+        diagrams={diagrams}
+        mode={selectedDiagram ? 'single' : 'project'}
+      />
     </div>
   )
 }

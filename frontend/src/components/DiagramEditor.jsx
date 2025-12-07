@@ -14,13 +14,14 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { useMutation, useQueryClient, useQuery } from 'react-query'
 import { diagramsAPI } from '../api'
-import { Save, CheckCircle2, Link2, ExternalLink, Unlink, ArrowUpRight, HelpCircle } from 'lucide-react'
+import { Save, CheckCircle2, Link2, ExternalLink, Unlink, ArrowUpRight, HelpCircle, Download } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ShapeNode from './nodes/ShapeNode'
 import ERDEdge from './edges/ERDEdge'
 import AttributeModal from './AttributeModal'
 import LinkDiagramModal from './LinkDiagramModal'
 import KeyboardShortcutsModal from './KeyboardShortcutsModal'
+import ExportModal from './ExportModal'
 
 // --- CONSTANTS ---
 const createUniqueId = (prefix = 'id') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -136,6 +137,7 @@ const DiagramEditorContent = ({
   const [attributeModal, setAttributeModal] = useState({ isOpen: false, node: null })
   const [linkModal, setLinkModal] = useState({ isOpen: false, node: null })
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [showExportModal, setShowExportModal] = useState(false)
   const saveTimeoutRef = useRef(null)
   const isDirtyRef = useRef(false)
   const lastSavedDataRef = useRef(null)
@@ -829,6 +831,13 @@ const DiagramEditorContent = ({
         return
       }
       
+      // Ctrl+E: Export
+      if (isCtrlOrCmd && e.code === 'KeyE') {
+        e.preventDefault()
+        setShowExportModal(true)
+        return
+      }
+      
       // Ctrl+Z: Undo (ReactFlow doesn't have built-in undo, just show message)
       if (isCtrlOrCmd && e.code === 'KeyZ' && !e.shiftKey) {
         e.preventDefault()
@@ -1058,6 +1067,16 @@ const DiagramEditorContent = ({
 
       {/* Save Status Indicator */}
       <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2">
+        {/* Export Button */}
+        <button
+          onClick={() => setShowExportModal(true)}
+          className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow text-sm text-gray-500 hover:text-gray-700 hover:shadow-md transition-all"
+          title="Export diagram (Ctrl+E)"
+        >
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">Export</span>
+        </button>
+        
         {/* Keyboard Shortcuts Button */}
         <button
           onClick={() => setShowShortcuts(true)}
@@ -1086,6 +1105,15 @@ const DiagramEditorContent = ({
       <KeyboardShortcutsModal 
         isOpen={showShortcuts} 
         onClose={() => setShowShortcuts(false)} 
+      />
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        diagramName={diagram?.name}
+        reactFlowInstance={reactFlowInstance}
+        mode="single"
       />
 
       {/* Incoming Links Panel */}
