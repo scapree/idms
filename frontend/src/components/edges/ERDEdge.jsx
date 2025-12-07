@@ -1,148 +1,100 @@
 import React from 'react'
 import { BaseEdge, EdgeLabelRenderer, getStraightPath } from 'reactflow'
 
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
+// Размер маркера (символа)
+const MARKER_SIZE = 14
 
-const toDegrees = (radians) => (radians * 180) / Math.PI
-
-const getPointAlongLine = (fromX, fromY, toX, toY, distance) => {
-  const dx = toX - fromX
-  const dy = toY - fromY
-  const length = Math.sqrt(dx * dx + dy * dy) || 1
-
-  return {
-    x: fromX + (dx / length) * distance,
-    y: fromY + (dy / length) * distance,
-  }
-}
-
-const renderCrowsFootSymbol = (cardinality, optional, color, strokeWidth) => {
-  const effectiveStroke = strokeWidth || 2.2
-  const elements = []
-
-  // Crow's foot notation:
-  // - Line (|): One (mandatory)
-  // - Circle (O): Zero/Optional
-  // - Crow's foot (<): Many
-
-  if (optional) {
-    // Draw circle for optional/nullable
-    elements.push(
-      <circle
-        key="circle"
-        cx="10"
-        cy="12"
-        r="5"
-        stroke={color}
-        strokeWidth={effectiveStroke - 0.6}
-        fill="none"
-      />
-    )
-  }
-
-  if (cardinality === 'one') {
-    // Draw single line for "one"
-    const x = optional ? 20 : 18
-    elements.push(
-      <line
-        key="one-line"
-        x1={x}
-        y1="2"
-        x2={x}
-        y2="22"
-        stroke={color}
-        strokeWidth={effectiveStroke}
-        strokeLinecap="round"
-      />
-    )
-  } else if (cardinality === 'many') {
-    // Draw crow's foot for "many"
-    const baseX = optional ? 18 : 16
-    elements.push(
-      <g key="crows-foot">
-        <path
-          d={`M${baseX} 12 L${baseX + 14} 2`}
-          stroke={color}
-          strokeWidth={effectiveStroke}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-        <path
-          d={`M${baseX} 12 L${baseX + 14} 22`}
-          stroke={color}
-          strokeWidth={effectiveStroke}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          fill="none"
-        />
-        <line
-          x1={baseX}
-          y1="12"
-          x2={baseX + 16}
-          y2="12"
-          stroke={color}
-          strokeWidth={effectiveStroke}
-          strokeLinecap="round"
-        />
-      </g>
-    )
-  }
-
-  return <>{elements}</>
-}
-
-const CardinalityMarker = ({ x, y, angle, cardinality, optional, color, strokeWidth }) => {
-  if (!cardinality) {
-    return null
-  }
+/**
+ * Рисует символ ER (Crow's Foot).
+ * 0,0 - это точка касания с узлом (Entity).
+ * Ось X идет ОТ узла ВДОЛЬ линии.
+ */
+const ERDMarkerSymbol = ({ cardinality, optional }) => {
+  const strokeColor = 'currentColor'
+  const strokeWidth = 2
 
   return (
-    <EdgeLabelRenderer>
-      <div
-        className="pointer-events-none"
-        style={{
-          position: 'absolute',
-          left: x,
-          top: y,
-          transform: `translate(-50%, -50%) rotate(${angle}deg)`,
-          transformOrigin: 'center',
-          width: 40,
-          height: 24,
-        }}
-      >
-        <svg width="40" height="24" viewBox="0 0 40 24" fill="none">
-          {renderCrowsFootSymbol(cardinality, optional, color, strokeWidth)}
-        </svg>
-      </div>
-    </EdgeLabelRenderer>
+    <g>
+      {/* 1. Основная часть кардинальности (One или Many) */}
+      {cardinality === 'many' ? (
+        // Лапка вороны (<).
+        // Открытая часть (концы) находятся на x=0 (у границы узла).
+        // Сходятся в точку на x=MARKER_SIZE (в сторону линии).
+        <>
+          <path
+            d={`M0,-7 L${MARKER_SIZE},0 L0,7`}
+            fill="none"
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {/* Центральная линия, чтобы соединить острие с основной линией */}
+          <line
+            x1={0}
+            y1={0}
+            x2={MARKER_SIZE}
+            y2={0}
+            stroke={strokeColor}
+            strokeWidth={strokeWidth}
+          />
+        </>
+      ) : (
+        // One (прямая черта |)
+        // Рисуем перпендикулярную линию рядом с узлом
+        <line
+          x1={2}
+          y1={-7}
+          x2={2}
+          y2={7}
+          stroke={strokeColor}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+        />
+      )}
+
+      {/* 2. Часть опциональности (Optional O или Mandatory |) - рисуется чуть дальше от узла */}
+      {optional ? (
+        // Кружок (O)
+        <circle
+          cx={MARKER_SIZE + 4} // Смещаем дальше по линии
+          cy={0}
+          r={4}
+          fill="white"
+          stroke={strokeColor}
+          strokeWidth={strokeWidth}
+        />
+      ) : (
+        // Mandatory (вторая черта |)
+        <line
+          x1={MARKER_SIZE + 2}
+          y1={-7}
+          x2={MARKER_SIZE + 2}
+          y2={7}
+          stroke={strokeColor}
+          strokeWidth={strokeWidth}
+          strokeLinecap="round"
+        />
+      )}
+    </g>
   )
 }
 
-const ERDEdge = (props) => {
-  const {
-    id,
-    source,
-    target,
-    sourceX,
-    sourceY,
-    targetX,
-    targetY,
-    sourcePosition,
-    targetPosition,
-    style = {},
-    data = {},
-    markerStart,
-    markerEnd,
-    selected,
-    label,
-    labelStyle,
-    labelShowBg = true,
-    labelBgStyle,
-    labelBgPadding,
-    labelBgBorderRadius,
-  } = props
-
+const ERDEdge = ({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  style = {},
+  data,
+  label,
+  labelStyle,
+  labelShowBg = true,
+  labelBgStyle,
+  labelBgBorderRadius,
+}) => {
+  // 1. Вычисляем путь линии
   const [edgePath, labelX, labelY] = getStraightPath({
     sourceX,
     sourceY,
@@ -150,109 +102,76 @@ const ERDEdge = (props) => {
     targetY,
   })
 
-  const strokeColor = style.stroke || '#0f172a'
-  const baseStrokeWidth = style.strokeWidth || 2.2
-  const effectiveStrokeWidth = selected ? baseStrokeWidth + 0.6 : baseStrokeWidth
-  const edgeStyle = {
-    ...style,
-    stroke: strokeColor,
-    strokeWidth: effectiveStrokeWidth,
-  }
+  // 2. Вычисляем угол наклона линии
+  // angle - это угол вектора от Source к Target
+  const angle = Math.atan2(targetY - sourceY, targetX - sourceX) * (180 / Math.PI)
 
-  const dx = targetX - sourceX
-  const dy = targetY - sourceY
-  const length = Math.sqrt(dx * dx + dy * dy) || 1
-  const offset = clamp(length * 0.18, 18, 42)
-
-  const sourcePoint = getPointAlongLine(sourceX, sourceY, targetX, targetY, offset)
-  const targetPoint = getPointAlongLine(targetX, targetY, sourceX, sourceY, offset)
-  const sourceAngle = toDegrees(Math.atan2(targetY - sourceY, targetX - sourceX))
-  const targetAngle = toDegrees(Math.atan2(sourceY - targetY, sourceX - targetX))
-
-  // New crow's foot notation properties
+  // 3. Получаем данные о кардинальности
   const sourceCardinality = data?.sourceCardinality || 'one'
-  const targetCardinality = data?.targetCardinality || 'many'
   const sourceOptional = data?.sourceOptional || false
+  
+  const targetCardinality = data?.targetCardinality || 'many'
   const targetOptional = data?.targetOptional || false
-  const symbolColor = data?.symbolColor || strokeColor
-  const entityId = data?.entityId
-  const relationshipId = data?.relationshipId
 
-  const entityIsSource = (() => {
-    if (entityId) {
-      if (entityId === source) return true
-      if (entityId === target) return false
-    }
-    if (relationshipId) {
-      if (relationshipId === source) return false
-      if (relationshipId === target) return true
-    }
-    return true
-  })()
+  const edgeColor = style.stroke || '#000'
 
-  const entityPoint = entityIsSource ? sourcePoint : targetPoint
-  const entityAngle = entityIsSource ? sourceAngle : targetAngle
-  const entityCardinality = entityIsSource ? sourceCardinality : targetCardinality
-  const entityOptional = entityIsSource ? sourceOptional : targetOptional
-
-  const showLabel = label !== undefined && label !== null && String(label).length > 0
-
-  const resolvedLabelBgPadding = Array.isArray(labelBgPadding)
-    ? labelBgPadding
-    : [8, 4]
-
+  // Стили для метки
   const computedLabelStyle = {
     position: 'absolute',
     transform: 'translate(-50%, -50%)',
     pointerEvents: 'auto',
     fontSize: '12px',
     fontWeight: 600,
-    whiteSpace: 'nowrap',
-    color: labelStyle?.color || labelBgStyle?.color || symbolColor,
+    background: labelShowBg ? (labelBgStyle?.fill || 'rgba(255, 255, 255, 0.9)') : 'transparent',
+    padding: labelShowBg ? '4px 8px' : 0,
+    borderRadius: labelBgBorderRadius || 4,
     ...labelStyle,
-  }
-
-  if (labelShowBg !== false) {
-    computedLabelStyle.background = labelBgStyle?.fill || 'rgba(255, 255, 255, 0.95)'
-    computedLabelStyle.boxShadow = labelBgStyle?.boxShadow || '0 1px 3px rgba(15, 23, 42, 0.18)'
-    const [padX = 8, padY = 4] = resolvedLabelBgPadding
-    computedLabelStyle.padding = `${padY}px ${padX}px`
-    computedLabelStyle.borderRadius = labelBgBorderRadius ?? 6
-  }
-
-  if (labelBgStyle) {
-    Object.assign(computedLabelStyle, labelBgStyle)
   }
 
   return (
     <>
-      <BaseEdge
-        id={id}
-        path={edgePath}
-        markerStart={markerStart}
-        markerEnd={markerEnd}
-        style={edgeStyle}
-      />
+      {/* Сама линия. Рисуем её чуть короче визуально, чтобы она не перекрывала маркеры, 
+          но BaseEdge рисует полный путь. Маркеры лягут сверху. */}
+      <BaseEdge path={edgePath} style={{ ...style, strokeWidth: 2 }} />
 
-      <CardinalityMarker
-        x={entityPoint.x}
-        y={entityPoint.y}
-        angle={entityAngle}
-        cardinality={entityCardinality}
-        optional={entityOptional}
-        color={symbolColor}
-        strokeWidth={effectiveStrokeWidth}
-      />
+      {/* --- SOURCE MARKER --- */}
+      {/* Угол angle смотрит от Source к Target. 
+          Нам нужно, чтобы ось X маркера шла ОТ Source ВДОЛЬ линии. 
+          Это как раз совпадает с направлением angle. */}
+      <g
+        transform={`translate(${sourceX}, ${sourceY}) rotate(${angle})`}
+        style={{ color: edgeColor }}
+      >
+        <ERDMarkerSymbol 
+            cardinality={sourceCardinality} 
+            optional={sourceOptional} 
+        />
+      </g>
 
-      {showLabel && (
+      {/* --- TARGET MARKER --- */}
+      {/* Угол angle смотрит В Target. 
+          Нам нужно, чтобы ось X маркера шла ОТ Target ВДОЛЬ линии (обратно к Source).
+          Поэтому поворачиваем на angle + 180. */}
+      <g
+        transform={`translate(${targetX}, ${targetY}) rotate(${angle + 180})`}
+        style={{ color: edgeColor }}
+      >
+        <ERDMarkerSymbol 
+            cardinality={targetCardinality} 
+            optional={targetOptional} 
+        />
+      </g>
+
+      {/* Текстовая метка */}
+      {label && (
         <EdgeLabelRenderer>
           <div
-            className="nodrag nopan"
             style={{
               ...computedLabelStyle,
               left: labelX,
               top: labelY,
             }}
+            className="nodrag nopan"
           >
             {label}
           </div>
@@ -263,5 +182,3 @@ const ERDEdge = (props) => {
 }
 
 export default ERDEdge
-
-

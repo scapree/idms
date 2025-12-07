@@ -385,94 +385,8 @@ const buildErdConfiguration = () => {
     },
   ]
 
-  const relationships = [
-    {
-      id: 'erd-relationship',
-      name: 'Relationship',
-      paletteIcon: 'Diamond',
-      previewColor: '#9333ea',
-      nodeConfig: {
-        label: 'Relationship',
-        shape: 'relationship',
-        width: 140,
-        height: 140,
-        background: '#faf5ff',
-        borderColor: '#9333ea',
-        borderWidth: 3,
-        textColor: '#581c87',
-        attributes: [],
-        handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
-      },
-    },
-  ]
-
-  const connectors = [
-    {
-      id: 'erd-one-to-one',
-      name: 'One to One (Mandatory)',
-      connectionType: 'erd-one-to-one',
-      description: 'Exactly one entity on both ends',
-      icon: 'Minus',
-      data: {
-        sourceCardinality: 'one',
-        targetCardinality: 'one',
-        sourceOptional: false,
-        targetOptional: false,
-      },
-    },
-    {
-      id: 'erd-one-to-one-optional',
-      name: 'One to One (Optional)',
-      connectionType: 'erd-one-to-one-optional',
-      description: 'One to one with nullable relationship',
-      icon: 'Circle',
-      data: {
-        sourceCardinality: 'one',
-        targetCardinality: 'one',
-        sourceOptional: true,
-        targetOptional: true,
-      },
-    },
-    {
-      id: 'erd-one-to-many',
-      name: 'One to Many (Mandatory)',
-      connectionType: 'erd-one-to-many',
-      description: 'One parent with many children',
-      icon: 'GitBranch',
-      data: {
-        sourceCardinality: 'one',
-        targetCardinality: 'many',
-        sourceOptional: false,
-        targetOptional: false,
-      },
-    },
-    {
-      id: 'erd-one-to-many-optional',
-      name: 'One to Many (Optional)',
-      connectionType: 'erd-one-to-many-optional',
-      description: 'One to many with nullable relationship',
-      icon: 'GitFork',
-      data: {
-        sourceCardinality: 'one',
-        targetCardinality: 'many',
-        sourceOptional: true,
-        targetOptional: false,
-      },
-    },
-    {
-      id: 'erd-many-to-many',
-      name: 'Many to Many',
-      connectionType: 'erd-many-to-many',
-      description: 'Many-to-many relationship',
-      icon: 'Network',
-      data: {
-        sourceCardinality: 'many',
-        targetCardinality: 'many',
-        sourceOptional: false,
-        targetOptional: false,
-      },
-    },
-  ]
+  // Мы убрали relationships и connectors, как вы просили.
+  // Теперь возвращаем чистую конфигурацию только с сущностями.
 
   return {
     groups: [
@@ -480,13 +394,10 @@ const buildErdConfiguration = () => {
         title: 'Entities',
         items: entities,
       },
-      {
-        title: 'Relationships',
-        items: relationships,
-      },
     ],
-    connectorsTitle: 'Connection Types',
-    connectors,
+    // Убираем заголовок и список типов связей
+    connectorsTitle: null,
+    connectors: [],
   }
 }
 
