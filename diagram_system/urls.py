@@ -34,6 +34,7 @@ from diagrams.views import (
     ProjectInviteCreateView,
     ProjectInviteDetailView,
     ProjectInviteListView,
+    ProjectLinksView,
     register_user,
 )
 
@@ -95,6 +96,8 @@ urlpatterns = [
     path('api/links/<int:link_id>/', DiagramLinkDetailView.as_view(), name='link_detail_slash'),
     path('api/diagrams-for-linking', ProjectDiagramsForLinkingView.as_view(), name='diagrams_for_linking'),
     path('api/diagrams-for-linking/', ProjectDiagramsForLinkingView.as_view(), name='diagrams_for_linking_slash'),
+    path('api/projects/<int:project_id>/links', ProjectLinksView.as_view(), name='project_links'),
+    path('api/projects/<int:project_id>/links/', ProjectLinksView.as_view(), name='project_links_slash'),
 
     # Legacy diagram link aliases  
     path('diagrams/<int:diagram_id>/links', DiagramLinksView.as_view(), name='legacy_diagram_links'),
@@ -102,4 +105,6 @@ urlpatterns = [
     path('diagrams/<int:diagram_id>/elements/<str:element_id>/links', ElementLinksView.as_view(), name='legacy_element_links'),
     path('links/<int:link_id>', DiagramLinkDetailView.as_view(), name='legacy_link_detail'),
     path('diagrams-for-linking', ProjectDiagramsForLinkingView.as_view(), name='legacy_diagrams_for_linking'),
+    path('projects/<int:project_id>/links', ProjectLinksView.as_view(), name='legacy_project_links'),
+    path('projects/<int:project_id>/links/', ProjectLinksView.as_view(), name='legacy_project_links_slash'),
 ]

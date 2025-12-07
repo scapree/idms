@@ -8,8 +8,9 @@ import DiagramTree from '../components/DiagramTree'
 import DiagramPalette from '../components/DiagramPalette'
 import ExportModal from '../components/ExportModal'
 import DiagramTemplatesModal from '../components/DiagramTemplatesModal'
+import DiagramMap from '../components/DiagramMap'
 import { useAuth } from '../hooks/useAuth'
-import { ArrowLeft, Plus, FileText, Share2, Copy, X, Download, LayoutTemplate } from 'lucide-react'
+import { ArrowLeft, Plus, FileText, Share2, Copy, X, Download, LayoutTemplate, Map } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const ProjectPage = () => {
@@ -26,7 +27,9 @@ const ProjectPage = () => {
   const [inviteLink, setInviteLink] = useState('')
   const [showExportModal, setShowExportModal] = useState(false)
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
+  const [showDiagramMap, setShowDiagramMap] = useState(false)
   const [pendingTemplate, setPendingTemplate] = useState(null)
+  const [highlightElementId, setHighlightElementId] = useState(null)
   const { user } = useAuth()
   const heldLockRef = useRef(null)
   const diagramForceSaveRef = useRef(null)
@@ -253,11 +256,16 @@ const ProjectPage = () => {
   }
 
   // Handle navigation to linked diagrams
-  const handleNavigateToDiagram = async (targetDiagramId, targetProjectId) => {
+  const handleNavigateToDiagram = async (targetDiagramId, targetProjectId, targetElementId = null) => {
+    // Clear previous highlight
+    setHighlightElementId(null)
+    
     // If it's in a different project, navigate there
     if (targetProjectId && targetProjectId !== parseInt(projectId)) {
-      navigate(`/projects/${targetProjectId}`)
-      // Note: The diagram selection will need to happen after project loads
+      // Store target element in URL state for cross-project navigation
+      navigate(`/projects/${targetProjectId}`, { 
+        state: { targetDiagramId, targetElementId } 
+      })
       toast.success('Переход к связанной диаграмме в другом проекте...')
       return
     }
@@ -266,6 +274,14 @@ const ProjectPage = () => {
     const targetDiagram = diagrams.find(d => d.id === targetDiagramId)
     if (targetDiagram) {
       await handleSelectDiagram(targetDiagram)
+      
+      // Set highlight after a short delay to allow diagram to render
+      if (targetElementId) {
+        setTimeout(() => {
+          setHighlightElementId(targetElementId)
+        }, 300)
+      }
+      
       toast.success(`Открыта диаграмма "${targetDiagram.name}"`)
     } else {
       // Diagram might not be in cache, fetch it
@@ -273,6 +289,14 @@ const ProjectPage = () => {
         const freshDiagram = await diagramsAPI.getDiagram(targetDiagramId)
         setSelectedDiagram(freshDiagram)
         queryClient.invalidateQueries(['diagrams', projectId])
+        
+        // Set highlight after a short delay
+        if (targetElementId) {
+          setTimeout(() => {
+            setHighlightElementId(targetElementId)
+          }, 300)
+        }
+        
         toast.success(`Открыта диаграмма "${freshDiagram.name}"`)
       } catch (e) {
         toast.error('Не удалось открыть связанную диаграмму')
@@ -334,6 +358,14 @@ const ProjectPage = () => {
               Заблокировано {lockOwnerLabel}
             </span>
           )}
+          <button
+            onClick={() => setShowDiagramMap(true)}
+            className="btn btn-secondary btn-sm"
+            title="Карта связей между диаграммами"
+          >
+            <Map className="h-4 w-4 mr-1" />
+            Карта связей
+          </button>
           <button
             onClick={() => setShowExportModal(true)}
             disabled={!selectedDiagram}
@@ -400,6 +432,8 @@ const ProjectPage = () => {
               connectionType={connectionType}
               setForceSaveRef={(fn) => { diagramForceSaveRef.current = fn }}
               onNavigateToDiagram={handleNavigateToDiagram}
+              highlightElementId={highlightElementId}
+              onHighlightClear={() => setHighlightElementId(null)}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center bg-gray-50">
@@ -571,6 +605,22 @@ const ProjectPage = () => {
         onClose={() => setShowTemplatesModal(false)}
         onSelectTemplate={handleSelectTemplate}
         diagramType={selectedDiagramType}
+      />
+
+      {/* Diagram Map Modal */}
+      <DiagramMap
+        projectId={parseInt(projectId)}
+        diagrams={diagrams}
+        currentDiagramId={selectedDiagram?.id}
+        isOpen={showDiagramMap}
+        onClose={() => setShowDiagramMap(false)}
+        onDiagramSelect={async (diagramId) => {
+          const diagram = diagrams.find(d => d.id === diagramId)
+          if (diagram) {
+            await handleSelectDiagram(diagram)
+            setShowDiagramMap(false)
+          }
+        }}
       />
     </div>
   )

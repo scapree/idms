@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react'
 import { Handle, Position } from 'reactflow'
 import * as Icons from 'lucide-react'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Link2, Layers, Code, Database } from 'lucide-react'
 
 const DEFAULT_TEXT_STYLES = {
   fontWeight: 600,
@@ -11,6 +11,42 @@ const DEFAULT_TEXT_STYLES = {
 }
 
 const ALL_HANDLE_POSITIONS = [Position.Top, Position.Right, Position.Bottom, Position.Left]
+
+// Стили и иконки для типов связей
+const LINK_TYPE_CONFIG = {
+  reference: { 
+    bg: 'bg-gray-500', 
+    hoverBg: 'hover:bg-gray-600', 
+    activeBg: 'active:bg-gray-700',
+    borderColor: 'border-gray-400',
+    icon: Link2,
+    label: 'Ссылка'
+  },
+  decomposition: { 
+    bg: 'bg-green-500', 
+    hoverBg: 'hover:bg-green-600', 
+    activeBg: 'active:bg-green-700',
+    borderColor: 'border-green-400',
+    icon: Layers,
+    label: 'Декомпозиция'
+  },
+  implementation: { 
+    bg: 'bg-blue-500', 
+    hoverBg: 'hover:bg-blue-600', 
+    activeBg: 'active:bg-blue-700',
+    borderColor: 'border-blue-400',
+    icon: Code,
+    label: 'Реализация'
+  },
+  data_source: { 
+    bg: 'bg-amber-500', 
+    hoverBg: 'hover:bg-amber-600', 
+    activeBg: 'active:bg-amber-700',
+    borderColor: 'border-amber-400',
+    icon: Database,
+    label: 'Источник данных'
+  },
+}
 
 const normalizePosition = (value) => {
   if (!value) return null
@@ -65,9 +101,23 @@ const ShapeNode = ({ data = {} }) => {
     linkedDiagramType,
     linkedDiagramProject,
     linkCount = 0,
+    allLinks = [],
+    // Highlight state
+    isHighlighted = false,
   } = data
 
   const hasLink = Boolean(linkedDiagram)
+  
+  // Получить первичный тип связи (или смешанный если разные)
+  const primaryLinkType = useMemo(() => {
+    if (!allLinks || allLinks.length === 0) return 'reference'
+    const types = [...new Set(allLinks.map(l => l.link_type))]
+    if (types.length === 1) return types[0]
+    // Если есть разные типы, показываем первый
+    return allLinks[0].link_type || 'reference'
+  }, [allLinks])
+
+  const linkConfig = LINK_TYPE_CONFIG[primaryLinkType] || LINK_TYPE_CONFIG.reference
 
   // Handle badge click - dispatch custom event for navigation
   const handleBadgeClick = (e) => {
@@ -228,19 +278,22 @@ const ShapeNode = ({ data = {} }) => {
     return base
   }
 
-  // Link indicator badge - flat style
+  // Link indicator badge - with type-based styling
   const renderLinkBadge = () => {
     if (!hasLink) return null
     
     const displayCount = linkCount > 1
+    const LinkIcon = linkConfig.icon
+    
+    // Формируем подсказку с информацией о типе связи
     const tooltipText = linkCount > 1 
-      ? `${linkCount} связей (клик для перехода, ПКМ для списка)`
-      : `Перейти к ${linkedDiagramName}`
+      ? `${linkCount} связей (${linkConfig.label}) • клик для перехода, ПКМ для списка`
+      : `${linkConfig.label} → ${linkedDiagramName}`
     
     return (
       <div 
         onClick={handleBadgeClick}
-        className="absolute -top-2 -right-2 z-20 flex items-center justify-center bg-primary-500 border-2 border-white rounded cursor-pointer group/badge transition-all hover:bg-primary-600 active:bg-primary-700"
+        className={`absolute -top-2 -right-2 z-20 flex items-center justify-center ${linkConfig.bg} ${linkConfig.hoverBg} ${linkConfig.activeBg} border-2 border-white rounded cursor-pointer group/badge transition-all`}
         style={{ 
           minWidth: 22, 
           height: 22,
@@ -251,18 +304,30 @@ const ShapeNode = ({ data = {} }) => {
         {displayCount ? (
           <span className="text-white text-xs font-bold">{linkCount}</span>
         ) : (
-          <ExternalLink className="w-3 h-3 text-white" />
+          <LinkIcon className="w-3 h-3 text-white" />
         )}
         {/* Tooltip on hover */}
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover/badge:opacity-100 transition-opacity pointer-events-none">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover/badge:opacity-100 transition-opacity pointer-events-none z-30">
           {tooltipText}
         </div>
       </div>
     )
   }
 
+  // Получить цвет рамки в зависимости от типа связи
+  const getLinkBorderColor = () => {
+    if (!hasLink) return null
+    const colorMap = {
+      reference: '#6b7280',      // gray-500
+      decomposition: '#22c55e',  // green-500
+      implementation: '#3b82f6', // blue-500
+      data_source: '#f59e0b',    // amber-500
+    }
+    return colorMap[primaryLinkType] || colorMap.reference
+  }
+
   return (
-    <div className={`relative group ${hasLink ? 'cursor-pointer' : ''}`}>
+    <div className={`relative group ${hasLink ? 'cursor-pointer' : ''} ${isHighlighted ? 'animate-pulse' : ''}`}>
       {handleDefinitions.map((handle, index) => (
         <Handle
           key={`${handle.type}-${handle.position}-${index}`}
@@ -276,12 +341,26 @@ const ShapeNode = ({ data = {} }) => {
       {renderByShape()}
       {renderLinkBadge()}
       
-      {/* Selection/link indicator border for linked nodes */}
-      {hasLink && (
+      {/* Selection/link indicator border for linked nodes - color based on link type */}
+      {hasLink && !isHighlighted && (
         <div 
-          className="absolute inset-0 pointer-events-none border-2 border-primary-400"
+          className="absolute inset-0 pointer-events-none"
           style={{
             borderRadius: shape === 'circle' ? '50%' : borderRadius,
+            border: `2px solid ${getLinkBorderColor()}`,
+            opacity: 0.7,
+          }}
+        />
+      )}
+      
+      {/* Highlight border for navigation target */}
+      {isHighlighted && (
+        <div 
+          className="absolute -inset-1 pointer-events-none animate-pulse"
+          style={{
+            borderRadius: shape === 'circle' ? '50%' : borderRadius + 4,
+            border: '3px solid #f59e0b',
+            boxShadow: '0 0 20px rgba(245, 158, 11, 0.5)',
           }}
         />
       )}

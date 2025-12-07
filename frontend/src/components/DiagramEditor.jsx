@@ -127,7 +127,8 @@ const dataChanged = (oldNodes, oldEdges, newNodes, newEdges) => {
 const DiagramEditorContent = ({ 
   diagram, diagramType, isLocked, connectionType, 
   nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange,
-  onDataChange, initialDataRef, setForceSaveRef, onNavigateToDiagram
+  onDataChange, initialDataRef, setForceSaveRef, onNavigateToDiagram,
+  highlightElementId
 }) => {
   const reactFlowInstance = useReactFlow()
   const queryClient = useQueryClient()
@@ -135,9 +136,10 @@ const DiagramEditorContent = ({
   const [lastSaved, setLastSaved] = useState(null)
   const [contextMenu, setContextMenu] = useState(null)
   const [attributeModal, setAttributeModal] = useState({ isOpen: false, node: null })
-  const [linkModal, setLinkModal] = useState({ isOpen: false, node: null })
+  const [linkModal, setLinkModal] = useState({ isOpen: false, node: null, editingLink: null })
   const [showShortcuts, setShowShortcuts] = useState(false)
   const [showExportModal, setShowExportModal] = useState(false)
+  const [highlightedNodeId, setHighlightedNodeId] = useState(null)
   const saveTimeoutRef = useRef(null)
   const isDirtyRef = useRef(false)
   const lastSavedDataRef = useRef(null)
@@ -163,7 +165,13 @@ const DiagramEditorContent = ({
   const createLinkMutation = useMutation(
     (linkData) => diagramsAPI.createDiagramLink(diagram.id, linkData),
     {
-      onSuccess: async () => {
+      onSuccess: async (data) => {
+        // Show warnings if any from semantic validation
+        if (data.warnings && data.warnings.length > 0) {
+          data.warnings.forEach(warning => {
+            toast(warning, { icon: '⚠️', duration: 5000 })
+          })
+        }
         toast.success('Связь создана!')
         // Invalidate ALL diagram links queries to update incoming panels too
         await queryClient.invalidateQueries({ queryKey: ['diagram-links'] })
@@ -190,6 +198,21 @@ const DiagramEditorContent = ({
     }
   )
 
+  // Update link mutation
+  const updateLinkMutation = useMutation(
+    ({ linkId, linkData }) => diagramsAPI.updateDiagramLink(linkId, linkData),
+    {
+      onSuccess: async () => {
+        toast.success('Связь обновлена!')
+        await queryClient.invalidateQueries({ queryKey: ['diagram-links'] })
+        setLinkModal({ isOpen: false, node: null, editingLink: null })
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.detail || 'Не удалось обновить связь')
+      }
+    }
+  )
+
   // Create a map of element IDs to their links (array - multiple links allowed)
   // Using JSON.stringify to ensure proper dependency tracking
   const outgoingLinksJson = JSON.stringify(diagramLinks?.outgoing || [])
@@ -204,12 +227,13 @@ const DiagramEditorContent = ({
     return map
   }, [outgoingLinksJson])
 
-  // Enrich nodes with link data (supports multiple links)
+  // Enrich nodes with link data (supports multiple links) and highlight state
   const enrichedNodes = useMemo(() => {
     return nodes.map(node => {
       const links = elementLinksMap.get(node.id)
+      const isHighlighted = highlightedNodeId === node.id
       // Strip old link data first to ensure clean state
-      const { linkedDiagram, linkedDiagramName, linkedDiagramType, linkId, allLinks, linkCount, ...cleanData } = node.data || {}
+      const { linkedDiagram, linkedDiagramName, linkedDiagramType, linkId, allLinks, linkCount, isHighlighted: _, ...cleanData } = node.data || {}
       
       if (links && links.length > 0) {
         const firstLink = links[0]
@@ -224,6 +248,7 @@ const DiagramEditorContent = ({
             linkId: firstLink.id,
             allLinks: links,
             linkCount: links.length,
+            isHighlighted,
           }
         }
       }
@@ -231,10 +256,13 @@ const DiagramEditorContent = ({
       // No links - return node with clean data (no link properties)
       return {
         ...node,
-        data: cleanData
+        data: {
+          ...cleanData,
+          isHighlighted,
+        }
       }
     })
-  }, [nodes, elementLinksMap])
+  }, [nodes, elementLinksMap, highlightedNodeId])
 
   // Center view on nodes after mount
   useEffect(() => {
@@ -505,7 +533,12 @@ const DiagramEditorContent = ({
 
   // Handle link actions from context menu
   const handleCreateLink = (node) => {
-    setLinkModal({ isOpen: true, node })
+    setLinkModal({ isOpen: true, node, editingLink: null })
+    setContextMenu(null)
+  }
+
+  const handleEditLink = (node, link) => {
+    setLinkModal({ isOpen: true, node, editingLink: link })
     setContextMenu(null)
   }
 
@@ -526,13 +559,17 @@ const DiagramEditorContent = ({
 
   const handleNavigateToLinked = (link) => {
     if (link && onNavigateToDiagram) {
-      onNavigateToDiagram(link.target_diagram, link.target_diagram_project)
+      onNavigateToDiagram(link.target_diagram, link.target_diagram_project, link.target_element_id)
     }
     setContextMenu(null)
   }
 
   const handleLinkSave = (linkData) => {
     createLinkMutation.mutate(linkData)
+  }
+
+  const handleLinkUpdate = (linkId, linkData) => {
+    updateLinkMutation.mutate({ linkId, linkData })
   }
 
   // Actions
@@ -892,14 +929,41 @@ const DiagramEditorContent = ({
   // Listen for badge click navigation events
   useEffect(() => {
     const handleNavigateEvent = (e) => {
-      const { diagramId, projectId } = e.detail
+      const { diagramId, projectId, targetElementId } = e.detail
       if (diagramId && onNavigateToDiagram) {
-        onNavigateToDiagram(diagramId, projectId)
+        onNavigateToDiagram(diagramId, projectId, targetElementId)
       }
     }
     window.addEventListener('navigate-to-diagram', handleNavigateEvent)
     return () => window.removeEventListener('navigate-to-diagram', handleNavigateEvent)
   }, [onNavigateToDiagram])
+
+  // Highlight element when navigating to it
+  useEffect(() => {
+    if (highlightElementId && reactFlowInstance) {
+      setHighlightedNodeId(highlightElementId)
+      
+      // Find and focus on the highlighted node
+      const targetNode = nodes.find(n => n.id === highlightElementId)
+      if (targetNode) {
+        // Wait a bit for the diagram to render, then fit view
+        setTimeout(() => {
+          reactFlowInstance.fitView({
+            nodes: [{ id: highlightElementId }],
+            padding: 0.5,
+            duration: 500,
+          })
+        }, 100)
+      }
+      
+      // Remove highlight after 3 seconds
+      const timer = setTimeout(() => {
+        setHighlightedNodeId(null)
+      }, 3000)
+      
+      return () => clearTimeout(timer)
+    }
+  }, [highlightElementId, reactFlowInstance, nodes])
 
   return (
     <>
@@ -950,6 +1014,14 @@ const DiagramEditorContent = ({
                           >
                             <ArrowUpRight className="w-4 h-4" />
                             <span className="truncate">{link.target_diagram_name}</span>
+                            <span className="text-xs text-gray-400 ml-auto">{link.link_type}</span>
+                          </button>
+                          <button 
+                            onClick={() => handleEditLink(contextMenu.data, link)}
+                            className="px-2 py-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50"
+                            title="Редактировать связь"
+                          >
+                            <Edit className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => handleRemoveLink(contextMenu.data, link.id)}
@@ -1061,11 +1133,14 @@ const DiagramEditorContent = ({
 
       <LinkDiagramModal
         isOpen={linkModal.isOpen}
-        onClose={() => setLinkModal({ isOpen: false, node: null })}
+        onClose={() => setLinkModal({ isOpen: false, node: null, editingLink: null })}
         onSave={handleLinkSave}
+        onUpdate={handleLinkUpdate}
         sourceNode={linkModal.node}
         currentDiagramId={diagram?.id}
+        currentDiagramType={diagramType}
         existingLinks={diagramLinks?.outgoing || []}
+        editingLink={linkModal.editingLink}
       />
 
       {/* Save Status Indicator */}

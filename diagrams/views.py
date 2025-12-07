@@ -378,12 +378,21 @@ class DiagramLinksView(APIView):
                     status=status.HTTP_403_FORBIDDEN,
                 )
             
+            # Extract validation warnings before save
+            warnings = serializer.validated_data.pop('_validation_warnings', [])
+            
             link = serializer.save(
                 source_diagram=diagram,
                 created_by=request.user
             )
+            
+            # Include warnings in response if any
+            response_data = DiagramLinkSerializer(link).data
+            if warnings:
+                response_data['warnings'] = warnings
+            
             return Response(
-                DiagramLinkSerializer(link).data,
+                response_data,
                 status=status.HTTP_201_CREATED,
             )
         
@@ -393,6 +402,7 @@ class DiagramLinksView(APIView):
 class DiagramLinkDetailView(APIView):
     """
     GET: Get a specific link
+    PATCH: Update a link
     DELETE: Remove a link
     """
     permission_classes = [IsAuthenticated]
@@ -404,6 +414,32 @@ class DiagramLinkDetailView(APIView):
 
     def get(self, request, link_id):
         link = self._get_link(link_id, request.user)
+        return Response(DiagramLinkSerializer(link).data, status=status.HTTP_200_OK)
+
+    def patch(self, request, link_id):
+        """Update link type, description, or target element"""
+        link = self._get_link(link_id, request.user)
+        
+        allowed_fields = ['link_type', 'description', 'target_element_id']
+        updated = False
+        
+        for field in allowed_fields:
+            if field in request.data:
+                value = request.data[field]
+                # Validate link_type
+                if field == 'link_type':
+                    valid_types = [t[0] for t in DiagramLink.LINK_TYPES]
+                    if value not in valid_types:
+                        return Response(
+                            {"detail": f"Invalid link_type. Must be one of: {valid_types}"},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                setattr(link, field, value if value else ('' if field == 'description' else None))
+                updated = True
+        
+        if updated:
+            link.save()
+        
         return Response(DiagramLinkSerializer(link).data, status=status.HTTP_200_OK)
 
     def delete(self, request, link_id):
@@ -460,3 +496,23 @@ class ProjectDiagramsForLinkingView(APIView):
             result.append(project_data)
         
         return Response(result, status=status.HTTP_200_OK)
+
+
+class ProjectLinksView(APIView):
+    """
+    GET: Get all links between diagrams in a project
+    Useful for DiagramMap visualization
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, project_id):
+        project = _get_project_for_user(project_id, request.user)
+        
+        # Get all links where source diagram belongs to this project
+        links = DiagramLink.objects.filter(
+            source_diagram__project=project
+        ).select_related(
+            'source_diagram', 'target_diagram', 'created_by'
+        )
+        
+        return Response(DiagramLinkSerializer(links, many=True).data, status=status.HTTP_200_OK)

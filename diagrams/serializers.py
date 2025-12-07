@@ -180,8 +180,46 @@ class DiagramLinkCreateSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         source_diagram = self.context.get('source_diagram')
         target_diagram = attrs.get('target_diagram')
+        link_type = attrs.get('link_type', 'reference')
         
+        # Cannot link to self
         if target_diagram == source_diagram:
-            raise serializers.ValidationError({"target_diagram": "Cannot link to the same diagram."})
+            raise serializers.ValidationError({"target_diagram": "Нельзя связать диаграмму с самой собой."})
+        
+        # Semantic validation for link types
+        warnings = []
+        
+        # data_source should typically point to ERD diagrams
+        if link_type == 'data_source' and target_diagram.diagram_type != 'erd':
+            warnings.append(
+                f"Тип связи 'Источник данных' обычно используется для связи с ERD диаграммами, "
+                f"а не с {target_diagram.diagram_type.upper()}."
+            )
+        
+        # decomposition typically links same types or BPMN -> DFD
+        if link_type == 'decomposition':
+            valid_decompositions = [
+                (source_diagram.diagram_type, source_diagram.diagram_type),  # Same type
+                ('bpmn', 'dfd'),  # BPMN process can decompose to DFD
+                ('bpmn', 'bpmn'),  # BPMN subprocess
+            ]
+            source_type = source_diagram.diagram_type
+            target_type = target_diagram.diagram_type
+            if (source_type, target_type) not in valid_decompositions:
+                warnings.append(
+                    f"Декомпозиция {source_type.upper()} в {target_type.upper()} — нетипичная связь."
+                )
+        
+        # implementation typically links BPMN -> ERD or DFD
+        if link_type == 'implementation':
+            if source_diagram.diagram_type not in ['bpmn', 'dfd']:
+                warnings.append(
+                    f"Тип связи 'Реализация' обычно используется для BPMN или DFD диаграмм."
+                )
+        
+        # Store warnings in context for potential frontend display (non-blocking)
+        # The link is still created, but warnings are noted
+        if warnings:
+            attrs['_validation_warnings'] = warnings
         
         return attrs

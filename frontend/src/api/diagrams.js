@@ -57,6 +57,11 @@ export const diagramsAPI = {
     return response.data
   },
 
+  updateDiagramLink: async (linkId, linkData) => {
+    const response = await apiClient.patch(`/links/${linkId}`, linkData)
+    return response.data
+  },
+
   getElementLinks: async (diagramId, elementId) => {
     const response = await apiClient.get(`/diagrams/${diagramId}/elements/${elementId}/links`)
     return response.data
@@ -64,6 +69,12 @@ export const diagramsAPI = {
 
   getDiagramsForLinking: async () => {
     const response = await apiClient.get('/diagrams-for-linking')
+    return response.data
+  },
+
+  // Project links for DiagramMap
+  getProjectLinks: async (projectId) => {
+    const response = await apiClient.get(`/projects/${projectId}/links`)
     return response.data
   },
 }
