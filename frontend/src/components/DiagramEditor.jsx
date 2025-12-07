@@ -22,6 +22,7 @@ import AttributeModal from './AttributeModal'
 import LinkDiagramModal from './LinkDiagramModal'
 import KeyboardShortcutsModal from './KeyboardShortcutsModal'
 import ExportModal from './ExportModal'
+import ValidationPanel from './ValidationPanel'
 
 // --- CONSTANTS ---
 const createUniqueId = (prefix = 'id') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -1396,6 +1397,37 @@ const DiagramEditorContent = ({
           </div>
         </div>
       )}
+
+      {/* Validation Panel */}
+      <ValidationPanel
+        diagramType={diagramType}
+        nodes={nodes}
+        edges={edges}
+        onIssueClick={(elementId, elementType) => {
+          // Подсветка элемента при клике на проблему
+          if (elementType === 'node') {
+            setHighlightedNodeId(elementId)
+            // Центрируем на элементе
+            const targetNode = nodes.find(n => n.id === elementId)
+            if (targetNode && reactFlowInstance) {
+              reactFlowInstance.fitView({
+                nodes: [{ id: elementId }],
+                padding: 0.5,
+                duration: 500,
+              })
+            }
+            // Убираем подсветку через 3 секунды
+            setTimeout(() => setHighlightedNodeId(null), 3000)
+          } else if (elementType === 'edge') {
+            // Для связей выделяем её в ReactFlow
+            setEdges(eds => eds.map(e => ({
+              ...e,
+              selected: e.id === elementId
+            })))
+          }
+        }}
+        className="absolute top-4 right-4 z-10 max-w-md"
+      />
     </>
   )
 }
