@@ -51,6 +51,8 @@ class ProjectSerializer(serializers.ModelSerializer):
 
 class DiagramSerializer(serializers.ModelSerializer):
     locked_by = UserSerializer(read_only=True)
+    # Explicitly define data field to ensure DRF handles the JSON payload correctly
+    data = serializers.JSONField(binary=False, default=dict)
 
     class Meta:
         model = Diagram

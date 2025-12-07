@@ -1,4 +1,5 @@
 from datetime import timedelta
+import json
 
 from django.contrib.auth import authenticate
 from django.shortcuts import get_object_or_404
@@ -168,7 +169,20 @@ class DiagramDetailApiView(APIView):
 
     def put(self, request, diagram_id):
         diagram = self._get_diagram(diagram_id, request.user)
-        serializer = DiagramSerializer(diagram, data=request.data, partial=True)
+        
+        # Manually extract data to ensure JSON structure is preserved
+        update_data = request.data.copy()
+        if 'data' in request.data:
+            # Ensure 'data' is treated as a raw dictionary/json object
+            diagram_data = request.data['data']
+            if isinstance(diagram_data, str):
+                try:
+                    diagram_data = json.loads(diagram_data)
+                except json.JSONDecodeError:
+                    pass
+            update_data['data'] = diagram_data
+
+        serializer = DiagramSerializer(diagram, data=update_data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)

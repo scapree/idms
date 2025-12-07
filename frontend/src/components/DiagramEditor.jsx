@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import ReactFlow, {
   MiniMap,
   Controls,
@@ -12,9 +12,9 @@ import ReactFlow, {
   useReactFlow,
 } from 'reactflow'
 import 'reactflow/dist/style.css'
-import { useMutation } from 'react-query'
+import { useMutation, useQueryClient } from 'react-query'
 import { diagramsAPI } from '../api'
-import { Lock, Save } from 'lucide-react'
+import { Lock, Save, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ShapeNode from './nodes/ShapeNode'
 import ERDEdge from './edges/ERDEdge'
@@ -46,9 +46,11 @@ const getConnectionData = (type) => {
 
 const DiagramEditorContent = ({ 
   diagram, diagramType, isLocked, lockUser, connectionType, 
-  nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange 
+  nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange,
+  isDataLoaded 
 }) => {
   const reactFlowInstance = useReactFlow()
+  const queryClient = useQueryClient()
   const [isSaving, setIsSaving] = useState(false)
   const [contextMenu, setContextMenu] = useState(null)
   const [attributeModal, setAttributeModal] = useState({ isOpen: false, node: null })
@@ -88,24 +90,61 @@ const DiagramEditorContent = ({
   const updateDiagramMutation = useMutation(
     (data) => diagramsAPI.updateDiagram(diagram.id, data),
     {
-      onSuccess: () => { toast.success('Saved'); setIsSaving(false) },
-      onError: () => { toast.error('Failed to save'); setIsSaving(false) },
+      onSuccess: () => { 
+        setIsSaving(false)
+        queryClient.invalidateQueries(['diagrams', diagram.project])
+      },
+      onError: (error) => { 
+        console.error("Save error:", error);
+        toast.error('Failed to save diagram'); 
+        setIsSaving(false) 
+      },
     }
   )
 
+  // --- SAVE HANDLER ---
   const handleSave = useCallback(() => {
-    if (!diagram || isLocked) return
+    if (!diagram || isLocked || !reactFlowInstance || !isDataLoaded) return
+    
     setIsSaving(true)
-    const content = JSON.stringify({ nodes, edges })
-    updateDiagramMutation.mutate({ content })
-  }, [diagram, nodes, edges, isLocked, updateDiagramMutation])
 
+    // Merge logic:
+    // React Flow instance has the correct Position (x,y)
+    // "nodes" State has the correct Data (attributes, labels, etc.)
+    // We must merge them to avoid losing attributes or position.
+    const flowNodes = reactFlowInstance.getNodes()
+    const flowEdges = reactFlowInstance.getEdges()
+
+    const mergedNodes = flowNodes.map(flowNode => {
+        const stateNode = nodes.find(n => n.id === flowNode.id)
+        if (!stateNode) return flowNode
+        return {
+            ...flowNode,
+            data: {
+                ...flowNode.data,
+                ...stateNode.data // Prefer state data (attributes) over flow data if they differ
+            }
+        }
+    })
+
+    const payload = { 
+      data: { 
+        nodes: mergedNodes, 
+        edges: flowEdges 
+      } 
+    }
+    
+    updateDiagramMutation.mutate(payload)
+  }, [diagram, isLocked, reactFlowInstance, updateDiagramMutation, isDataLoaded, nodes])
+
+  // Автосохранение
   useEffect(() => {
-    if (diagram && !isSaving && !isLocked) {
-      const timer = setTimeout(handleSave, 5000)
+    // CRITICAL: Only save if data has been loaded initially to avoid overwriting with empty state
+    if (diagram && !isSaving && !isLocked && isDataLoaded) {
+      const timer = setTimeout(handleSave, 3000) // 3 seconds debounce
       return () => clearTimeout(timer)
     }
-  }, [nodes, edges, diagram, isLocked])
+  }, [nodes, edges, diagram, isLocked, isDataLoaded]) 
 
   // --- CONNECTION HANDLER ---
   const onConnect = useCallback((params) => {
@@ -164,6 +203,8 @@ const DiagramEditorContent = ({
       data: {
         ...nodeConfig,
         label: nodeConfig.label || parsedData.name || 'Node',
+        // Ensure attributes array exists for ERD
+        attributes: nodeConfig.attributes || [],
       },
     }
     setNodes((nds) => nds.concat(newNode))
@@ -203,7 +244,7 @@ const DiagramEditorContent = ({
       setContextMenu(null);
   }
 
-  // 2. Change Cardinality (ERD) - ВОТ ЭТА ФУНКЦИЯ
+  // 2. Change Cardinality (ERD)
   const updateEdgeCardinality = (edgeId, type) => {
       const settings = ERD_PRESETS[type];
       setEdges((eds) => eds.map(e => {
@@ -233,6 +274,24 @@ const DiagramEditorContent = ({
       setContextMenu(null)
   }
 
+  const handleAttributeSave = (newData) => {
+      setNodes((nds) => nds.map((n) => {
+          if (n.id === attributeModal.node.id) {
+              return {
+                  ...n,
+                  data: {
+                      ...n.data,
+                      label: newData.label,
+                      attributes: newData.attributes // Ensure deep update
+                  }
+              }
+          }
+          return n
+      }))
+      // Force close to avoid stale closures
+      setAttributeModal({ isOpen: false, node: null })
+  }
+
   return (
     <>
       <ReactFlow
@@ -245,6 +304,7 @@ const DiagramEditorContent = ({
         onDrop={onDrop} onDragOver={onDragOver}
         nodeTypes={nodeTypes} edgeTypes={edgeTypes}
         fitView connectionMode={ConnectionMode.Loose}
+        minZoom={0.1}
       >
         <Controls showInteractive={false} />
         <MiniMap nodeStrokeWidth={3} zoomable={!isLocked} pannable={!isLocked} />
@@ -277,7 +337,7 @@ const DiagramEditorContent = ({
                         <button onClick={() => handleRenameEdge(contextMenu.data)} className="w-full px-4 py-2 text-left hover:bg-gray-100">Rename Data Flow</button>
                     )}
 
-                    {/* ERD Cardinality - ВОТ ЭТОТ БЛОК ВЕРНУЛСЯ */}
+                    {/* ERD Cardinality */}
                     {diagramType === 'erd' && (
                         <>
                             <div className="px-4 py-1 text-xs text-gray-400 uppercase font-semibold border-b">Change Cardinality</div>
@@ -300,7 +360,7 @@ const DiagramEditorContent = ({
       <AttributeModal
         isOpen={attributeModal.isOpen}
         onClose={() => setAttributeModal({ isOpen: false, node: null })}
-        onSave={(data) => setNodes(nds => nds.map(n => n.id === attributeModal.node.id ? { ...n, data: { ...n.data, ...data } } : n))}
+        onSave={handleAttributeSave}
         nodeData={attributeModal.node?.data}
         isEntity={isErdEntity(attributeModal.node)}
       />
@@ -312,33 +372,99 @@ const DiagramEditor = (props) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
   const [edges, setEdges, onEdgesChange] = useEdgesState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isDataLoaded, setIsDataLoaded] = useState(false)
+  
+  // Ref чтобы запомнить ID текущей диаграммы
+  const loadedDiagramIdRef = useRef(null)
 
   useEffect(() => {
-    setIsLoading(true)
-    const timer = setTimeout(() => {
-        const rawContent = props.diagram?.data ?? props.diagram?.content
-        if (rawContent) {
-          try {
-            const content = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent
-            setNodes(content.nodes || [])
-            setEdges(content.edges || [])
-          } catch (e) { console.error("Load Error", e) }
-        } else { setNodes([]); setEdges([]) }
-        setIsLoading(false)
-    }, 100)
-    return () => clearTimeout(timer)
-  }, [props.diagram, setNodes, setEdges])
+    // Reset state when diagram ID changes
+    if (props.diagram?.id && props.diagram.id !== loadedDiagramIdRef.current) {
+        setIsLoading(true)
+        setIsDataLoaded(false)
+        setNodes([])
+        setEdges([])
+        loadedDiagramIdRef.current = props.diagram.id
+        
+        // Timeout to allow render cycle to clear previous diagram
+        const timer = setTimeout(() => {
+            const rawData = props.diagram?.data
+            let content = { nodes: [], edges: [] }
+            
+            try {
+                if (rawData) {
+                    if (typeof rawData === 'string') {
+                        content = JSON.parse(rawData)
+                    } else if (typeof rawData === 'object') {
+                        content = rawData
+                    }
+                } else if (props.diagram?.content) {
+                    // Legacy support
+                    content = typeof props.diagram.content === 'string' 
+                        ? JSON.parse(props.diagram.content) 
+                        : props.diagram.content
+                }
+            } catch (e) { 
+                console.error("Load error", e) 
+            }
+
+            // Ensure content.nodes is an array
+            const safeNodes = Array.isArray(content.nodes) ? content.nodes : []
+            const safeEdges = Array.isArray(content.edges) ? content.edges : []
+
+            setNodes(safeNodes)
+            setEdges(safeEdges)
+            setIsLoading(false)
+            
+            // Allow autosave only after data is fully set
+            setTimeout(() => {
+                setIsDataLoaded(true)
+            }, 500)
+            
+        }, 50)
+        return () => clearTimeout(timer)
+    }
+  }, [props.diagram?.id, setNodes, setEdges, props.diagram])
 
   return (
     <div className="h-full flex flex-col">
        <div className="flex items-center justify-between p-4 bg-white border-b">
-         <h2 className="text-lg font-medium">{props.diagram?.name || 'Untitled'}</h2>
-         <button className="btn btn-sm btn-primary flex gap-1" onClick={() => toast.success('Saved')}><Save className="w-4"/>Save</button>
+         <div className="flex items-center gap-2">
+            <h2 className="text-lg font-medium">{props.diagram?.name || 'Untitled'}</h2>
+            <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 font-mono uppercase">
+                {props.diagram?.diagram_type}
+            </span>
+         </div>
+         <div className="flex items-center gap-3">
+             {/* Status Indicator */}
+             {!isDataLoaded && !isLoading && (
+                 <span className="text-xs text-orange-500 flex items-center gap-1">
+                     <RefreshCw className="w-3 h-3 animate-spin"/> Syncing...
+                 </span>
+             )}
+             {isDataLoaded && (
+                 <div className="text-xs text-gray-400 flex items-center gap-1">
+                     <Save className="w-3 h-3"/> Saved
+                 </div>
+             )}
+         </div>
        </div>
-       <div className="flex-1 relative">
-         {isLoading ? <div className="absolute inset-0 flex items-center justify-center bg-white z-50">Loading...</div> : 
+       <div className="flex-1 relative bg-gray-50">
+         {isLoading ? 
+            <div className="absolute inset-0 flex items-center justify-center bg-white z-50">
+                <div className="flex flex-col items-center gap-2">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+                    <span className="text-sm text-gray-500">Loading diagram...</span>
+                </div>
+            </div> 
+            : 
              <ReactFlowProvider>
-                <DiagramEditorContent {...props} nodes={nodes} setNodes={setNodes} onNodesChange={onNodesChange} edges={edges} setEdges={setEdges} onEdgesChange={onEdgesChange} />
+                <DiagramEditorContent 
+                    {...props} 
+                    nodes={nodes} setNodes={setNodes} onNodesChange={onNodesChange} 
+                    edges={edges} setEdges={setEdges} onEdgesChange={onEdgesChange} 
+                    isDataLoaded={isDataLoaded}
+                />
              </ReactFlowProvider>
          }
        </div>
