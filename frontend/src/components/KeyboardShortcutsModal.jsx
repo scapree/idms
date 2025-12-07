@@ -79,7 +79,7 @@ const KeyboardShortcutsModal = ({ isOpen, onClose }) => {
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div 
-          className="bg-white rounded-lg border border-gray-200 w-full max-w-2xl max-h-[85vh] overflow-hidden pointer-events-auto"
+          className="bg-white rounded-lg border border-gray-200 w-full max-w-3xl max-h-[85vh] overflow-hidden pointer-events-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -110,12 +110,12 @@ const KeyboardShortcutsModal = ({ isOpen, onClose }) => {
                     {group.shortcuts.map((shortcut, idx) => (
                       <div 
                         key={idx}
-                        className="flex items-center justify-between py-2 px-3 rounded hover:bg-gray-50 transition-colors group"
+                        className="flex items-start justify-between gap-3 py-2 px-3 rounded hover:bg-gray-50 transition-colors group"
                       >
-                        <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors">
+                        <span className="flex-1 text-sm leading-5 text-gray-600 group-hover:text-gray-900 transition-colors">
                           {shortcut.description}
                         </span>
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-shrink-0 items-center gap-1">
                           {shortcut.keys.map((key, keyIdx) => (
                             <span key={keyIdx}>
                               {keyIdx > 0 && (
