@@ -11,16 +11,16 @@ const DiagramTree = ({ diagrams, selectedDiagram, onSelectDiagram }) => {
   const deleteDiagramMutation = useMutation(diagramsAPI.deleteDiagram, {
     onSuccess: () => {
       queryClient.invalidateQueries('diagrams')
-      toast.success('Diagram deleted successfully!')
+      toast.success('Диаграмма удалена!')
     },
     onError: (error) => {
-      toast.error(error.response?.data?.detail || 'Failed to delete diagram')
+      toast.error(error.response?.data?.detail || 'Не удалось удалить диаграмму')
     },
   })
 
   const handleDelete = (diagramId, e) => {
     e.stopPropagation()
-    if (window.confirm('Are you sure you want to delete this diagram?')) {
+    if (window.confirm('Вы уверены, что хотите удалить эту диаграмму?')) {
       deleteDiagramMutation.mutate(diagramId)
     }
   }
@@ -53,47 +53,47 @@ const DiagramTree = ({ diagrams, selectedDiagram, onSelectDiagram }) => {
 
   if (diagrams.length === 0) {
     return (
-      <div className="p-4 text-center text-gray-500">
+      <div className="p-6 text-center">
         <FileText className="mx-auto h-8 w-8 text-gray-300 mb-2" />
-        <p className="text-sm">No diagrams yet</p>
+        <p className="text-sm text-gray-400">Нет диаграмм</p>
       </div>
     )
   }
 
   return (
-    <div className="p-2">
+    <div className="p-2 space-y-1">
       {diagrams.map((diagram) => (
         <div
           key={diagram.id}
-          className={`group flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${
+          className={`group flex items-center justify-between p-2.5 rounded cursor-pointer transition-colors ${
             selectedDiagram?.id === diagram.id
               ? 'bg-primary-50 border border-primary-200'
-              : 'hover:bg-gray-50'
+              : 'hover:bg-gray-50 border border-transparent'
           }`}
           onClick={() => onSelectDiagram(diagram)}
         >
           <div className="flex items-center space-x-3 flex-1 min-w-0">
-            <span className="text-lg">{getDiagramIcon(diagram.diagram_type)}</span>
+            <span className="text-base">{getDiagramIcon(diagram.diagram_type)}</span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center space-x-2">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className={`text-sm font-medium truncate ${selectedDiagram?.id === diagram.id ? 'text-primary-700' : 'text-gray-900'}`}>
                   {diagram.name}
                 </p>
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                <span className="badge badge-secondary text-[10px] font-mono uppercase">
                   {getDiagramTypeLabel(diagram.diagram_type)}
                 </span>
               </div>
-              <p className="text-xs text-gray-500">
+              <p className="text-xs text-gray-400 mt-0.5">
                 {new Date(diagram.updated_at || diagram.created_at).toLocaleDateString()}
               </p>
             </div>
           </div>
           
-          <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               onClick={(e) => handleDelete(diagram.id, e)}
-              className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-              title="Delete diagram"
+              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+              title="Удалить диаграмму"
             >
               <Trash2 className="h-4 w-4" />
             </button>

@@ -27,21 +27,21 @@ const InvitePage = () => {
     () => projectsAPI.acceptInvite(token),
     {
       onSuccess: (data) => {
-        toast.success('Successfully joined the project!')
+        toast.success('Вы присоединились к проекту!')
         // Navigate to the project page
         setTimeout(() => {
           navigate(`/projects/${data.project_id}`)
         }, 1500)
       },
       onError: (error) => {
-        toast.error(error.response?.data?.detail || 'Failed to accept invite')
+        toast.error(error.response?.data?.detail || 'Не удалось принять приглашение')
       },
     }
   )
 
   const handleAcceptInvite = () => {
     if (!user) {
-      toast.error('Please log in to accept the invite')
+      toast.error('Войдите, чтобы принять приглашение')
       navigate('/login', { state: { from: `/invite/${token}` } })
       return
     }
@@ -53,8 +53,8 @@ const InvitePage = () => {
       <Layout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="flex flex-col items-center space-y-3">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-            <span className="text-gray-600 font-medium">Loading invitation...</span>
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-200 border-t-primary-600"></div>
+            <span className="text-sm text-gray-500 font-medium">Загрузка приглашения...</span>
           </div>
         </div>
       </Layout>
@@ -64,20 +64,22 @@ const InvitePage = () => {
   if (error || !inviteInfo) {
     return (
       <Layout>
-        <div className="max-w-2xl mx-auto mt-12 px-4">
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              Invalid Invite
+        <div className="max-w-md mx-auto mt-12 px-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+            <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="h-6 w-6 text-red-600" />
+            </div>
+            <h1 className="text-xl font-bold text-gray-900 mb-2">
+              Недействительная ссылка
             </h1>
-            <p className="text-gray-600 mb-6">
-              This invite link is invalid or has been removed.
+            <p className="text-sm text-gray-500 mb-6">
+              Эта ссылка-приглашение недействительна или была удалена.
             </p>
             <button
               onClick={() => navigate('/dashboard')}
-              className="btn btn-primary"
+              className="btn btn-primary btn-md"
             >
-              Go to Dashboard
+              На главную
             </button>
           </div>
         </div>
@@ -88,22 +90,24 @@ const InvitePage = () => {
   if (!inviteInfo.is_valid) {
     return (
       <Layout>
-        <div className="max-w-2xl mx-auto mt-12 px-4">
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <AlertCircle className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {inviteInfo.is_expired ? 'Invite Expired' : 'Invite No Longer Active'}
+        <div className="max-w-md mx-auto mt-12 px-4">
+          <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+            <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertCircle className="h-6 w-6 text-amber-600" />
+            </div>
+            <h1 className="text-xl font-bold text-gray-900 mb-2">
+              {inviteInfo.is_expired ? 'Приглашение истекло' : 'Приглашение недействительно'}
             </h1>
-            <p className="text-gray-600 mb-6">
+            <p className="text-sm text-gray-500 mb-6">
               {inviteInfo.is_expired 
-                ? 'This invite link has expired. Please ask the project owner for a new one.'
-                : 'This invite link is no longer active.'}
+                ? 'Срок действия ссылки истёк. Попросите владельца проекта создать новую.'
+                : 'Эта ссылка больше не действительна.'}
             </p>
             <button
               onClick={() => navigate('/dashboard')}
-              className="btn btn-primary"
+              className="btn btn-primary btn-md"
             >
-              Go to Dashboard
+              На главную
             </button>
           </div>
         </div>
@@ -113,84 +117,88 @@ const InvitePage = () => {
 
   return (
     <Layout>
-      <div className="max-w-2xl mx-auto mt-12 px-4">
-        <div className="bg-white rounded-lg shadow-md p-8">
-          <div className="text-center mb-8">
-            <UserPlus className="h-16 w-16 text-primary-600 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              You've been invited!
+      <div className="max-w-md mx-auto mt-12 px-4">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="text-center p-6 border-b border-gray-100">
+            <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <UserPlus className="h-6 w-6 text-primary-600" />
+            </div>
+            <h1 className="text-xl font-bold text-gray-900 mb-1">
+              Вас пригласили!
             </h1>
-            <p className="text-gray-600">
-              Join and collaborate on a project
+            <p className="text-sm text-gray-500">
+              Присоединяйтесь к работе над проектом
             </p>
           </div>
 
-          <div className="bg-gray-50 rounded-lg p-6 mb-6">
+          <div className="p-5 bg-gray-50 border-b border-gray-100">
             <div className="space-y-3">
               <div>
-                <span className="text-sm font-medium text-gray-500">Project Name</span>
-                <p className="text-lg font-semibold text-gray-900">{inviteInfo.project_name}</p>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Название проекта</span>
+                <p className="text-base font-semibold text-gray-900 mt-0.5">{inviteInfo.project_name}</p>
               </div>
               
               {inviteInfo.project_description && (
                 <div>
-                  <span className="text-sm font-medium text-gray-500">Description</span>
-                  <p className="text-gray-700">{inviteInfo.project_description}</p>
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Описание</span>
+                  <p className="text-sm text-gray-700 mt-0.5">{inviteInfo.project_description}</p>
                 </div>
               )}
               
               <div>
-                <span className="text-sm font-medium text-gray-500">Invited by</span>
-                <p className="text-gray-700">{inviteInfo.owner_username}</p>
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Приглашает</span>
+                <p className="text-sm text-gray-700 mt-0.5">{inviteInfo.owner_username}</p>
               </div>
             </div>
           </div>
 
-          {!user ? (
-            <div className="space-y-3">
-              <p className="text-center text-gray-600 mb-4">
-                You need to be logged in to accept this invitation
-              </p>
-              <button
-                onClick={() => navigate('/login', { state: { from: `/invite/${token}` } })}
-                className="btn btn-primary w-full"
-              >
-                Log In to Accept
-              </button>
-              <button
-                onClick={() => navigate('/register', { state: { from: `/invite/${token}` } })}
-                className="btn btn-secondary w-full"
-              >
-                Create Account
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <button
-                onClick={handleAcceptInvite}
-                disabled={acceptInviteMutation.isLoading}
-                className="btn btn-primary w-full"
-              >
-                {acceptInviteMutation.isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Joining...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="h-5 w-5 mr-2" />
-                    Accept Invitation
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => navigate('/dashboard')}
-                className="btn btn-secondary w-full"
-              >
-                Decline
-              </button>
-            </div>
-          )}
+          <div className="p-5">
+            {!user ? (
+              <div className="space-y-3">
+                <p className="text-center text-sm text-gray-500 mb-4">
+                  Войдите, чтобы принять приглашение
+                </p>
+                <button
+                  onClick={() => navigate('/login', { state: { from: `/invite/${token}` } })}
+                  className="btn btn-primary btn-md w-full"
+                >
+                  Войти и принять
+                </button>
+                <button
+                  onClick={() => navigate('/register', { state: { from: `/invite/${token}` } })}
+                  className="btn btn-secondary btn-md w-full"
+                >
+                  Создать аккаунт
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <button
+                  onClick={handleAcceptInvite}
+                  disabled={acceptInviteMutation.isLoading}
+                  className="btn btn-primary btn-md w-full"
+                >
+                  {acceptInviteMutation.isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2"></div>
+                      Присоединение...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Принять приглашение
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => navigate('/dashboard')}
+                  className="btn btn-secondary btn-md w-full"
+                >
+                  Отклонить
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </Layout>

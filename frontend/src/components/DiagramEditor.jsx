@@ -14,7 +14,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { useMutation, useQueryClient, useQuery } from 'react-query'
 import { diagramsAPI } from '../api'
-import { Save, CheckCircle2, Link2, ExternalLink, Unlink, ArrowUpRight, HelpCircle, Download } from 'lucide-react'
+import { Save, CheckCircle2, Link2, ExternalLink, Unlink, ArrowUpRight, Edit, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ShapeNode from './nodes/ShapeNode'
 import ERDEdge from './edges/ERDEdge'
@@ -164,13 +164,13 @@ const DiagramEditorContent = ({
     (linkData) => diagramsAPI.createDiagramLink(diagram.id, linkData),
     {
       onSuccess: async () => {
-        toast.success('Link created successfully!')
+        toast.success('Связь создана!')
         // Invalidate ALL diagram links queries to update incoming panels too
         await queryClient.invalidateQueries({ queryKey: ['diagram-links'] })
         setLinkModal({ isOpen: false, node: null })
       },
       onError: (error) => {
-        toast.error(error.response?.data?.detail || 'Failed to create link')
+        toast.error(error.response?.data?.detail || 'Не удалось создать связь')
       }
     }
   )
@@ -180,12 +180,12 @@ const DiagramEditorContent = ({
     (linkId) => diagramsAPI.deleteDiagramLink(linkId),
     {
       onSuccess: async () => {
-        toast.success('Link removed')
+        toast.success('Связь удалена')
         // Invalidate ALL diagram links queries to update everything
         await queryClient.invalidateQueries({ queryKey: ['diagram-links'] })
       },
       onError: (error) => {
-        toast.error(error.response?.data?.detail || 'Failed to remove link')
+        toast.error(error.response?.data?.detail || 'Не удалось удалить связь')
       }
     }
   )
@@ -659,7 +659,7 @@ const DiagramEditorContent = ({
       ).map(cleanEdgeForSave)
     }
     
-    toast.success(`Copied ${selectedNodes.length} element${selectedNodes.length !== 1 ? 's' : ''}`)
+    toast.success(`Скопировано: ${selectedNodes.length}`)
   }, [reactFlowInstance])
 
   // Paste elements
@@ -705,7 +705,7 @@ const DiagramEditorContent = ({
     setNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes])
     setEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges])
     
-    toast.success(`Pasted ${newNodes.length} element${newNodes.length !== 1 ? 's' : ''}`)
+    toast.success(`Вставлено: ${newNodes.length}`)
   }, [isLocked, setNodes, setEdges, markDirty])
 
   // Duplicate selected elements
@@ -748,7 +748,7 @@ const DiagramEditorContent = ({
     setNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes])
     setEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges])
     
-    toast.success(`Duplicated ${newNodes.length} element${newNodes.length !== 1 ? 's' : ''}`)
+    toast.success(`Дублировано: ${newNodes.length}`)
   }, [isLocked, reactFlowInstance, setNodes, setEdges, markDirty])
 
   // Zoom handlers
@@ -928,7 +928,7 @@ const DiagramEditorContent = ({
 
       {contextMenu && (
         <div 
-          className="fixed bg-white rounded-lg shadow-xl border py-1 z-50 text-sm min-w-[220px]" 
+          className="fixed bg-white rounded border border-gray-200 py-1 z-50 text-sm min-w-[200px]" 
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           {contextMenu.type === 'node' && (
@@ -939,36 +939,36 @@ const DiagramEditorContent = ({
                 if (nodeLinks && nodeLinks.length > 0) {
                   return (
                     <>
-                      <div className="px-3 py-1 text-xs text-gray-400 font-medium uppercase">
-                        Links ({nodeLinks.length})
+                      <div className="px-3 py-1.5 text-xs text-gray-500 font-medium uppercase tracking-wide bg-gray-50">
+                        Связи ({nodeLinks.length})
                       </div>
                       {nodeLinks.map(link => (
                         <div key={link.id} className="flex items-center hover:bg-gray-50">
                           <button 
                             onClick={() => handleNavigateToLinked(link)}
-                            className="flex-1 px-4 py-2 text-left flex items-center gap-2 text-indigo-600 hover:bg-indigo-50"
+                            className="flex-1 px-3 py-2 text-left flex items-center gap-2 text-primary-600 hover:bg-primary-50"
                           >
                             <ArrowUpRight className="w-4 h-4" />
                             <span className="truncate">{link.target_diagram_name}</span>
                           </button>
                           <button 
                             onClick={() => handleRemoveLink(contextMenu.data, link.id)}
-                            className="px-2 py-2 text-red-400 hover:text-red-600 hover:bg-red-50"
-                            title="Remove this link"
+                            className="px-2 py-2 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                            title="Удалить связь"
                           >
                             <Unlink className="w-4 h-4" />
                           </button>
                         </div>
                       ))}
-                      <div className="h-px bg-gray-200 my-1"></div>
+                      <div className="h-px bg-gray-100 my-1"></div>
                       <button 
                         onClick={() => handleCreateLink(contextMenu.data)}
-                        className="w-full px-4 py-2 text-left hover:bg-indigo-50 flex items-center gap-2 text-indigo-600"
+                        className="w-full px-3 py-2 text-left hover:bg-primary-50 flex items-center gap-2 text-primary-600"
                       >
                         <Link2 className="w-4 h-4" />
-                        Add Another Link...
+                        Добавить связь...
                       </button>
-                      <div className="h-px bg-gray-200 my-1"></div>
+                      <div className="h-px bg-gray-100 my-1"></div>
                     </>
                   )
                 }
@@ -976,12 +976,12 @@ const DiagramEditorContent = ({
                   <>
                     <button 
                       onClick={() => handleCreateLink(contextMenu.data)}
-                      className="w-full px-4 py-2 text-left hover:bg-indigo-50 flex items-center gap-2 text-indigo-600"
+                      className="w-full px-3 py-2 text-left hover:bg-primary-50 flex items-center gap-2 text-primary-600"
                     >
                       <Link2 className="w-4 h-4" />
-                      Link to Diagram...
+                      Связать с диаграммой...
                     </button>
-                    <div className="h-px bg-gray-200 my-1"></div>
+                    <div className="h-px bg-gray-100 my-1"></div>
                   </>
                 )
               })()}
@@ -989,23 +989,25 @@ const DiagramEditorContent = ({
               {diagramType === 'erd' && isErdEntity(contextMenu.data) && (
                 <button 
                   onClick={() => { setAttributeModal({ isOpen: true, node: contextMenu.data }); setContextMenu(null) }} 
-                  className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                  className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
                 >
-                  <span>✏️</span>Edit Attributes
+                  <Edit className="w-4 h-4" />
+                  Редактировать атрибуты
                 </button>
               )}
               <button 
                 onClick={() => {
-                  const label = window.prompt('Rename', contextMenu.data.data?.label)
+                  const label = window.prompt('Переименовать', contextMenu.data.data?.label)
                   if (label) {
                     markDirty()
                     setNodes(nds => nds.map(n => n.id === contextMenu.data.id ? {...n, data: {...n.data, label}} : n))
                   }
                   setContextMenu(null)
                 }} 
-                className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"
+                className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-gray-700"
               >
-                <span>📝</span>Rename
+                <Edit className="w-4 h-4" />
+                Переименовать
               </button>
             </>
           )}
@@ -1015,30 +1017,31 @@ const DiagramEditorContent = ({
               {diagramType === 'dfd' && (
                 <button 
                   onClick={() => handleRenameEdge(contextMenu.data)} 
-                  className="w-full px-4 py-2 text-left hover:bg-gray-100"
+                  className="w-full px-3 py-2 text-left hover:bg-gray-50 text-gray-700"
                 >
-                  Rename Data Flow
+                  Переименовать поток данных
                 </button>
               )}
               {diagramType === 'erd' && (
                 <>
-                  <div className="px-4 py-1 text-xs text-gray-400 uppercase font-semibold border-b">
-                    Change Cardinality
+                  <div className="px-3 py-1.5 text-xs text-gray-500 font-medium uppercase tracking-wide bg-gray-50">
+                    Кардинальность
                   </div>
-                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, '1:1')} className="w-full px-4 py-2 text-left hover:bg-gray-100">One to One (1:1)</button>
-                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, '1:N')} className="w-full px-4 py-2 text-left hover:bg-gray-100">One to Many (1:N)</button>
-                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, 'N:1')} className="w-full px-4 py-2 text-left hover:bg-gray-100">Many to One (N:1)</button>
-                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, 'M:N')} className="w-full px-4 py-2 text-left hover:bg-gray-100">Many to Many (M:N)</button>
+                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, '1:1')} className="w-full px-3 py-2 text-left hover:bg-gray-50 text-gray-700">Один к одному (1:1)</button>
+                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, '1:N')} className="w-full px-3 py-2 text-left hover:bg-gray-50 text-gray-700">Один ко многим (1:N)</button>
+                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, 'N:1')} className="w-full px-3 py-2 text-left hover:bg-gray-50 text-gray-700">Многие к одному (N:1)</button>
+                  <button onClick={() => updateEdgeCardinality(contextMenu.data.id, 'M:N')} className="w-full px-3 py-2 text-left hover:bg-gray-50 text-gray-700">Многие ко многим (M:N)</button>
                 </>
               )}
             </>
           )}
-          <div className="h-px bg-gray-200 my-1"></div>
+          <div className="h-px bg-gray-100 my-1"></div>
           <button 
             onClick={handleDelete} 
-            className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2"
+            className="w-full px-3 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2"
           >
-            <span>🗑️</span>Delete
+            <Trash2 className="w-4 h-4" />
+            Удалить
           </button>
         </div>
       )}
@@ -1066,37 +1069,16 @@ const DiagramEditorContent = ({
       />
 
       {/* Save Status Indicator */}
-      <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2">
-        {/* Export Button */}
-        <button
-          onClick={() => setShowExportModal(true)}
-          className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow text-sm text-gray-500 hover:text-gray-700 hover:shadow-md transition-all"
-          title="Export diagram (Ctrl+E)"
-        >
-          <Download className="w-4 h-4" />
-          <span className="hidden sm:inline">Export</span>
-        </button>
-        
-        {/* Keyboard Shortcuts Button */}
-        <button
-          onClick={() => setShowShortcuts(true)}
-          className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow text-sm text-gray-500 hover:text-gray-700 hover:shadow-md transition-all"
-          title="Keyboard shortcuts (?)"
-        >
-          <HelpCircle className="w-4 h-4" />
-          <span className="hidden sm:inline">Shortcuts</span>
-        </button>
-        
-        {/* Save Status */}
+      <div className="absolute bottom-4 right-4 z-10">
         {isSaving ? (
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow text-sm text-gray-600">
+          <div className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded text-sm text-gray-600">
             <Save className="w-4 h-4 animate-pulse" />
-            Saving...
+            Сохранение...
           </div>
         ) : lastSaved ? (
-          <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow text-sm text-green-600">
+          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded text-sm text-emerald-700">
             <CheckCircle2 className="w-4 h-4" />
-            Saved
+            Сохранено
           </div>
         ) : null}
       </div>
@@ -1119,17 +1101,17 @@ const DiagramEditorContent = ({
       {/* Incoming Links Panel */}
       {(diagramLinks?.incoming?.length ?? 0) > 0 && (
         <div className="absolute top-4 left-4 z-10 max-w-xs">
-          <div className="bg-white rounded-lg shadow-lg border overflow-hidden">
-            <div className="px-3 py-2 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-medium flex items-center gap-2">
+          <div className="bg-white rounded border border-gray-200 overflow-hidden">
+            <div className="px-3 py-2 bg-primary-50 border-b border-primary-100 text-primary-700 text-xs font-medium flex items-center gap-2">
               <ExternalLink className="w-3 h-3" />
-              Referenced by {diagramLinks.incoming.length} diagram{diagramLinks.incoming.length !== 1 ? 's' : ''}
+              Ссылается {diagramLinks.incoming.length} {diagramLinks.incoming.length === 1 ? 'диаграмма' : diagramLinks.incoming.length < 5 ? 'диаграммы' : 'диаграмм'}
             </div>
             <div className="max-h-32 overflow-y-auto">
               {diagramLinks.incoming.map(link => (
                 <button
                   key={link.id}
                   onClick={() => onNavigateToDiagram?.(link.source_diagram, link.target_diagram_project)}
-                  className="w-full px-3 py-2 text-left hover:bg-indigo-50 flex items-center gap-2 text-sm border-b last:border-0 transition-colors"
+                  className="w-full px-3 py-2 text-left hover:bg-gray-50 flex items-center gap-2 text-sm border-b border-gray-100 last:border-0 transition-colors"
                 >
                   <span className="flex-1 truncate text-gray-700">
                     {link.source_diagram_name}
@@ -1221,32 +1203,32 @@ const DiagramEditor = (props) => {
   if (!props.diagram) {
     return (
       <div className="h-full flex items-center justify-center bg-gray-50">
-        <span className="text-gray-500">No diagram selected</span>
+        <span className="text-gray-500">Диаграмма не выбрана</span>
       </div>
     )
   }
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between p-4 bg-white border-b">
-        <div className="flex items-center gap-2">
-          <h2 className="text-lg font-medium">{props.diagram?.name || 'Untitled'}</h2>
-          <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-600 font-mono uppercase">
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+        <div className="flex items-center gap-3">
+          <h2 className="text-base font-semibold text-gray-900">{props.diagram?.name || 'Без названия'}</h2>
+          <span className="badge badge-secondary font-mono uppercase">
             {props.diagram?.diagram_type}
           </span>
         </div>
-        <div className="text-xs text-gray-400 flex items-center gap-2">
-          <span>Press</span>
-          <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600 font-medium">?</kbd>
-          <span>for shortcuts</span>
+        <div className="text-xs text-gray-400 flex items-center gap-1.5">
+          <span>Нажмите</span>
+          <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded text-gray-600 font-medium text-[10px]">?</kbd>
+          <span>для справки</span>
         </div>
       </div>
       <div className="flex-1 relative bg-gray-50">
         {!isReady ? (
           <div className="absolute inset-0 flex items-center justify-center bg-white z-50">
             <div className="flex flex-col items-center gap-2">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
-              <span className="text-sm text-gray-500">Loading diagram...</span>
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-primary-600"></div>
+              <span className="text-sm text-gray-400">Загрузка диаграммы...</span>
             </div>
           </div>
         ) : (

@@ -84,27 +84,27 @@ const LinkDiagramModal = ({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl w-[700px] max-h-[85vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg border border-gray-200 w-[700px] max-h-[85vh] flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="px-6 py-4 border-b bg-gradient-to-r from-indigo-500 to-purple-600">
+        <div className="px-5 py-4 border-b bg-gray-50">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Link2 className="w-5 h-5 text-white" />
+              <div className="p-2 bg-primary-100 rounded">
+                <Link2 className="w-5 h-5 text-primary-600" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-white">Link to Diagram</h2>
-                <p className="text-sm text-white/80">
-                  Connect "{sourceNode?.data?.label || 'Element'}" to another diagram
+                <h2 className="text-base font-semibold text-gray-900">Связать с диаграммой</h2>
+                <p className="text-sm text-gray-500">
+                  Связать "{sourceNode?.data?.label || 'Элемент'}" с другой диаграммой
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              className="p-2 hover:bg-gray-200 rounded transition-colors"
             >
-              <X className="w-5 h-5 text-white" />
+              <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
         </div>
@@ -112,15 +112,15 @@ const LinkDiagramModal = ({
         {/* Content */}
         <div className="flex-1 overflow-hidden flex flex-col">
           {/* Search */}
-          <div className="px-6 py-4 border-b bg-gray-50">
+          <div className="px-5 py-4 border-b">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search diagrams..."
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                placeholder="Поиск диаграмм..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               />
             </div>
           </div>
@@ -129,12 +129,12 @@ const LinkDiagramModal = ({
           <div className="flex-1 overflow-y-auto p-4">
             {isLoading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-primary-600"></div>
               </div>
             ) : filteredProjects.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>No diagrams found</p>
+                <p>Диаграммы не найдены</p>
               </div>
             ) : (
               <div className="space-y-3">
@@ -147,7 +147,7 @@ const LinkDiagramModal = ({
                       <FolderOpen className="w-4 h-4 text-gray-500" />
                       <span className="font-medium text-gray-700">{project.name}</span>
                       <span className="text-xs text-gray-400 ml-auto">
-                        {project.diagrams.length} diagram{project.diagrams.length !== 1 ? 's' : ''}
+                        {project.diagrams.length} {project.diagrams.length === 1 ? 'диаграмма' : project.diagrams.length < 5 ? 'диаграммы' : 'диаграмм'}
                       </span>
                     </button>
                     
@@ -162,23 +162,23 @@ const LinkDiagramModal = ({
                               key={diagram.id}
                               onClick={() => handleSelectDiagram(diagram)}
                               disabled={isLinked}
-                              className={`w-full px-4 py-3 flex items-center gap-3 transition-colors ${
+                              className={`w-full px-4 py-2.5 flex items-center gap-3 transition-colors ${
                                 isLinked 
                                   ? 'bg-gray-50 opacity-50 cursor-not-allowed'
                                   : isSelected
-                                    ? 'bg-indigo-50 border-l-4 border-indigo-500'
+                                    ? 'bg-primary-50 border-l-2 border-primary-500'
                                     : 'hover:bg-gray-50'
                               }`}
                             >
-                              <FileText className={`w-4 h-4 ${isSelected ? 'text-indigo-600' : 'text-gray-400'}`} />
-                              <span className={`flex-1 text-left ${isSelected ? 'font-medium text-indigo-700' : 'text-gray-700'}`}>
+                              <FileText className={`w-4 h-4 ${isSelected ? 'text-primary-600' : 'text-gray-400'}`} />
+                              <span className={`flex-1 text-left ${isSelected ? 'font-medium text-primary-700' : 'text-gray-700'}`}>
                                 {diagram.name}
                               </span>
                               <span className={`text-xs px-2 py-0.5 rounded font-mono uppercase ${DIAGRAM_TYPE_COLORS[diagram.diagram_type] || 'bg-gray-100 text-gray-600'}`}>
                                 {diagram.diagram_type}
                               </span>
                               {isLinked && (
-                                <span className="text-xs text-gray-400">Already linked</span>
+                                <span className="text-xs text-gray-400">Уже связано</span>
                               )}
                             </button>
                           )
@@ -194,30 +194,30 @@ const LinkDiagramModal = ({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t bg-white flex items-center justify-between">
+        <div className="px-5 py-4 border-t bg-gray-50 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             {selectedDiagram && (
               <>
                 <span className="font-medium text-gray-700">{sourceNode?.data?.label}</span>
                 <ArrowRight className="w-4 h-4" />
-                <span className="font-medium text-indigo-600">{selectedDiagram.name}</span>
+                <span className="font-medium text-primary-600">{selectedDiagram.name}</span>
               </>
             )}
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              className="btn btn-secondary btn-md"
             >
-              Cancel
+              Отмена
             </button>
             <button
               onClick={handleSubmit}
               disabled={!selectedDiagram}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="btn btn-primary btn-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Link2 className="w-4 h-4" />
-              Create Link
+              Создать связь
             </button>
           </div>
         </div>

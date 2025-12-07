@@ -62,11 +62,11 @@ const ProjectPage = () => {
         setSelectedDiagram(newDiagram)
         setShowCreateModal(false)
         setNewDiagramName('')
-        toast.success('Diagram created successfully!')
+        toast.success('Диаграмма создана!')
       },
       onError: (error) => {
         const errorDetail = error.response?.data?.detail
-        let errorMessage = 'Failed to create diagram'
+        let errorMessage = 'Не удалось создать диаграмму'
         
         if (typeof errorDetail === 'string') {
           errorMessage = errorDetail
@@ -74,7 +74,7 @@ const ProjectPage = () => {
           // Pydantic v2 validation errors format
           errorMessage = errorDetail.map(err => err.msg || err.message).join(', ')
         } else if (errorDetail && typeof errorDetail === 'object') {
-          errorMessage = errorDetail.msg || errorDetail.message || 'Failed to create diagram'
+          errorMessage = errorDetail.msg || errorDetail.message || 'Не удалось создать диаграмму'
         }
         
         toast.error(errorMessage)
@@ -90,10 +90,10 @@ const ProjectPage = () => {
         const link = `${window.location.origin}/invite/${invite.token}`
         setInviteLink(link)
         setShowInviteModal(true)
-        toast.success('Invite link created!')
+        toast.success('Ссылка-приглашение создана!')
       },
       onError: (error) => {
-        toast.error(error.response?.data?.detail || 'Failed to create invite link')
+        toast.error(error.response?.data?.detail || 'Не удалось создать ссылку')
       },
     }
   )
@@ -181,7 +181,7 @@ const ProjectPage = () => {
 
   const handleCreateDiagram = () => {
     if (!newDiagramName.trim()) {
-      toast.error('Please enter a diagram name')
+      toast.error('Введите название диаграммы')
       return
     }
 
@@ -227,7 +227,7 @@ const ProjectPage = () => {
 
   const handleCopyInviteLink = () => {
     navigator.clipboard.writeText(inviteLink)
-    toast.success('Invite link copied to clipboard!')
+    toast.success('Ссылка скопирована!')
   }
 
   // Handle navigation to linked diagrams
@@ -236,7 +236,7 @@ const ProjectPage = () => {
     if (targetProjectId && targetProjectId !== parseInt(projectId)) {
       navigate(`/projects/${targetProjectId}`)
       // Note: The diagram selection will need to happen after project loads
-      toast.success('Navigating to linked diagram in another project...')
+      toast.success('Переход к связанной диаграмме в другом проекте...')
       return
     }
 
@@ -244,16 +244,16 @@ const ProjectPage = () => {
     const targetDiagram = diagrams.find(d => d.id === targetDiagramId)
     if (targetDiagram) {
       await handleSelectDiagram(targetDiagram)
-      toast.success(`Navigated to "${targetDiagram.name}"`)
+      toast.success(`Открыта диаграмма "${targetDiagram.name}"`)
     } else {
       // Diagram might not be in cache, fetch it
       try {
         const freshDiagram = await diagramsAPI.getDiagram(targetDiagramId)
         setSelectedDiagram(freshDiagram)
         queryClient.invalidateQueries(['diagrams', projectId])
-        toast.success(`Navigated to "${freshDiagram.name}"`)
+        toast.success(`Открыта диаграмма "${freshDiagram.name}"`)
       } catch (e) {
-        toast.error('Failed to navigate to linked diagram')
+        toast.error('Не удалось открыть связанную диаграмму')
       }
     }
   }
@@ -266,7 +266,7 @@ const ProjectPage = () => {
 
   const lockOwnerLabel = diagramLock
     ? lockedByCurrentUser
-      ? 'you'
+      ? 'вами'
       : diagramLock.user?.username
     : undefined
 
@@ -274,9 +274,9 @@ const ProjectPage = () => {
     return (
       <div className="h-full flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center space-y-3">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600"></div>
-          <span className="text-gray-600 font-medium">
-            {projectLoading ? 'Loading project...' : 'Loading diagrams...'}
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-200 border-t-primary-600"></div>
+          <span className="text-sm text-gray-500 font-medium">
+            {projectLoading ? 'Загрузка проекта...' : 'Загрузка диаграмм...'}
           </span>
         </div>
       </div>
@@ -286,20 +286,20 @@ const ProjectPage = () => {
   return (
     <div className="h-full flex flex-col overflow-hidden bg-gray-50">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b flex-shrink-0">
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center space-x-4">
           <button
             onClick={() => navigate('/dashboard')}
-            className="text-gray-500 hover:text-gray-700"
+            className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">
+            <h1 className="text-lg font-semibold text-gray-900">
               {project?.name}
             </h1>
-            <p className="text-sm text-gray-500">
-              {diagrams.length} diagram{diagrams.length !== 1 ? 's' : ''}
+            <p className="text-xs text-gray-500">
+              {diagrams.length} {diagrams.length === 1 ? 'диаграмма' : diagrams.length < 5 ? 'диаграммы' : 'диаграмм'}
             </p>
           </div>
         </div>
@@ -307,19 +307,19 @@ const ProjectPage = () => {
         <div className="flex items-center space-x-2">
           {selectedDiagram && diagramLock && (
             <span
-              className={`text-sm ${lockedByCurrentUser ? 'text-gray-500' : 'text-red-600'}`}
+              className={`text-xs px-2 py-1 rounded ${lockedByCurrentUser ? 'bg-gray-100 text-gray-600' : 'bg-red-50 text-red-600'}`}
             >
-              Locked by {lockedByCurrentUser ? 'you' : diagramLock.user?.username}
+              Заблокировано {lockOwnerLabel}
             </span>
           )}
           <button
             onClick={() => setShowExportModal(true)}
             disabled={!selectedDiagram}
             className="btn btn-secondary btn-sm"
-            title={selectedDiagram ? 'Export diagram' : 'Select a diagram to export'}
+            title={selectedDiagram ? 'Экспорт диаграммы' : 'Выберите диаграмму для экспорта'}
           >
             <Download className="h-4 w-4 mr-1" />
-            Export
+            Экспорт
           </button>
           <button
             onClick={handleCreateInvite}
@@ -327,14 +327,14 @@ const ProjectPage = () => {
             className="btn btn-secondary btn-sm"
           >
             <Share2 className="h-4 w-4 mr-1" />
-            Share
+            Поделиться
           </button>
           <button
             onClick={() => setShowCreateModal(true)}
             className="btn btn-primary btn-sm"
           >
             <Plus className="h-4 w-4 mr-1" />
-            New Diagram
+            Новая диаграмма
           </button>
         </div>
       </div>
@@ -342,9 +342,9 @@ const ProjectPage = () => {
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Panel - Diagram Tree */}
-        <div className="w-80 bg-white border-r flex flex-col flex-shrink-0">
-          <div className="p-4 border-b flex-shrink-0">
-            <h2 className="text-lg font-medium text-gray-900">Diagrams</h2>
+        <div className="w-72 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+          <div className="px-4 py-3 border-b border-gray-200 flex-shrink-0">
+            <h2 className="text-sm font-semibold text-gray-900">Диаграммы</h2>
           </div>
           <div className="flex-1 overflow-y-auto">
             <DiagramTree
@@ -373,10 +373,10 @@ const ProjectPage = () => {
               <div className="text-center">
                 <FileText className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900">
-                  No diagram selected
+                  Диаграмма не выбрана
                 </h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  Select a diagram from the left panel or create a new one.
+                  Выберите диаграмму слева или создайте новую.
                 </p>
               </div>
             </div>
@@ -384,7 +384,7 @@ const ProjectPage = () => {
         </div>
 
         {/* Right Panel - Palette */}
-        <div className="w-80 bg-white border-l flex-shrink-0 overflow-hidden">
+        <div className="w-72 bg-white border-l border-gray-200 flex-shrink-0 overflow-hidden">
           <DiagramPalette
             diagramType={selectedDiagram?.diagram_type || 'bpmn'}
             selectedConnectionType={connectionType}
@@ -395,59 +395,59 @@ const ProjectPage = () => {
 
       {/* Create Diagram Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="p-5 border w-96 shadow-lg rounded-md bg-white max-h-[90vh] overflow-y-auto">
-            <div className="mt-3">
-              <h3 className="text-lg font-medium text-gray-900 mb-4">
-                Create New Diagram
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg border border-gray-200 w-96 max-h-[90vh] overflow-hidden">
+            <div className="px-5 py-4 bg-gray-50 border-b">
+              <h3 className="text-base font-semibold text-gray-900">
+                Новая диаграмма
               </h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Diagram Name
-                  </label>
-                  <input
-                    type="text"
-                    value={newDiagramName}
-                    onChange={(e) => setNewDiagramName(e.target.value)}
-                    className="mt-1 input"
-                    placeholder="Enter diagram name"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Diagram Type
-                  </label>
-                  <select
-                    value={selectedDiagramType}
-                    onChange={(e) => setSelectedDiagramType(e.target.value)}
-                    className="mt-1 input"
-                  >
-                    <option value="bpmn">BPMN</option>
-                    <option value="erd">ERD</option>
-                    <option value="dfd">DFD</option>
-                  </select>
-                </div>
-                
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    onClick={() => {
-                      setShowCreateModal(false)
-                      setNewDiagramName('')
-                    }}
-                    className="btn btn-secondary"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCreateDiagram}
-                    disabled={createDiagramMutation.isLoading}
-                    className="btn btn-primary"
-                  >
-                    {createDiagramMutation.isLoading ? 'Creating...' : 'Create'}
-                  </button>
-                </div>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Название диаграммы
+                </label>
+                <input
+                  type="text"
+                  value={newDiagramName}
+                  onChange={(e) => setNewDiagramName(e.target.value)}
+                  className="input"
+                  placeholder="Введите название"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Тип диаграммы
+                </label>
+                <select
+                  value={selectedDiagramType}
+                  onChange={(e) => setSelectedDiagramType(e.target.value)}
+                  className="input"
+                >
+                  <option value="bpmn">BPMN</option>
+                  <option value="erd">ERD</option>
+                  <option value="dfd">DFD</option>
+                </select>
+              </div>
+              
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  onClick={() => {
+                    setShowCreateModal(false)
+                    setNewDiagramName('')
+                  }}
+                  className="btn btn-secondary btn-md"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleCreateDiagram}
+                  disabled={createDiagramMutation.isLoading}
+                  className="btn btn-primary btn-md"
+                >
+                  {createDiagramMutation.isLoading ? 'Создание...' : 'Создать'}
+                </button>
               </div>
             </div>
           </div>
@@ -456,24 +456,24 @@ const ProjectPage = () => {
 
       {/* Invite Modal */}
       {showInviteModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-          <div className="p-5 border w-[500px] shadow-lg rounded-md bg-white">
-            <div className="flex justify-between items-start mb-4">
-              <h3 className="text-lg font-medium text-gray-900">
-                Share Project
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg border border-gray-200 w-[500px] overflow-hidden">
+            <div className="flex justify-between items-center px-5 py-4 bg-gray-50 border-b">
+              <h3 className="text-base font-semibold text-gray-900">
+                Поделиться проектом
               </h3>
               <button
                 onClick={() => setShowInviteModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="p-1.5 hover:bg-gray-200 rounded transition-colors"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
             
-            <div className="space-y-4">
+            <div className="p-5 space-y-4">
               <p className="text-sm text-gray-600">
-                Share this link with others to invite them to collaborate on this project.
-                The link will expire in 24 hours.
+                Отправьте эту ссылку для приглашения к совместной работе над проектом.
+                Ссылка действительна 24 часа.
               </p>
               
               <div className="flex items-center space-x-2">
@@ -485,10 +485,10 @@ const ProjectPage = () => {
                 />
                 <button
                   onClick={handleCopyInviteLink}
-                  className="btn btn-primary"
+                  className="btn btn-primary btn-md"
                 >
                   <Copy className="h-4 w-4 mr-1" />
-                  Copy
+                  Копировать
                 </button>
               </div>
             </div>

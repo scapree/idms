@@ -4,48 +4,49 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Flat Design Color Palette */
+    --background: 0 0% 98%;
+    --foreground: 220 13% 18%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 220 13% 18%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --popover-foreground: 220 13% 18%;
+    --primary: 217 91% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 13% 18%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --accent: 217 91% 95%;
+    --accent-foreground: 217 91% 40%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 217 91% 50%;
+    --radius: 6px;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --background: 220 13% 10%;
+    --foreground: 220 14% 96%;
+    --card: 220 13% 12%;
+    --card-foreground: 220 14% 96%;
+    --popover: 220 13% 12%;
+    --popover-foreground: 220 14% 96%;
+    --primary: 217 91% 60%;
+    --primary-foreground: 220 13% 10%;
+    --secondary: 220 13% 18%;
+    --secondary-foreground: 220 14% 96%;
+    --muted: 220 13% 18%;
+    --muted-foreground: 220 9% 60%;
+    --accent: 220 13% 18%;
+    --accent-foreground: 220 14% 96%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 220 13% 20%;
+    --input: 220 13% 20%;
+    --ring: 217 91% 60%;
   }
 
   * {
@@ -65,23 +66,31 @@
 
 @layer components {
   .btn {
-    @apply inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50;
   }
   
   .btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700;
+    @apply bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800;
   }
   
   .btn-secondary {
-    @apply bg-secondary-100 text-secondary-900 hover:bg-secondary-200;
+    @apply bg-secondary-100 text-secondary-800 hover:bg-secondary-200 active:bg-secondary-300 border border-secondary-200;
   }
   
   .btn-outline {
-    @apply border border-input bg-background hover:bg-accent hover:text-accent-foreground;
+    @apply border border-input bg-background hover:bg-secondary-100 text-foreground;
+  }
+  
+  .btn-danger {
+    @apply bg-red-500 text-white hover:bg-red-600 active:bg-red-700;
+  }
+  
+  .btn-ghost {
+    @apply hover:bg-secondary-100 text-foreground;
   }
   
   .btn-sm {
-    @apply h-9 px-3;
+    @apply h-8 px-3 text-xs;
   }
   
   .btn-md {
@@ -89,59 +98,166 @@
   }
   
   .btn-lg {
-    @apply h-11 px-8;
+    @apply h-11 px-6;
   }
   
   .input {
-    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+    @apply flex h-10 w-full rounded border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:cursor-not-allowed disabled:opacity-50 transition-shadow;
   }
   
   .card {
-    @apply rounded-lg border bg-card text-card-foreground shadow-sm;
+    @apply rounded border bg-card text-card-foreground;
   }
   
   .card-header {
-    @apply flex flex-col space-y-1.5 p-6;
+    @apply flex flex-col space-y-1.5 p-5;
   }
   
   .card-content {
-    @apply p-6 pt-0;
+    @apply p-5 pt-0;
+  }
+
+  /* Modal backdrop */
+  .modal-backdrop {
+    @apply fixed inset-0 bg-black/50 z-50 transition-opacity;
+  }
+
+  /* Modal container */
+  .modal {
+    @apply bg-white rounded-lg shadow-lg overflow-hidden;
+  }
+
+  /* Modal header - flat style */
+  .modal-header {
+    @apply px-5 py-4 bg-secondary-50 border-b flex items-center justify-between;
+  }
+
+  /* Badge styles */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
+  }
+  
+  .badge-primary {
+    @apply bg-primary-100 text-primary-700;
+  }
+  
+  .badge-secondary {
+    @apply bg-secondary-200 text-secondary-700;
+  }
+  
+  .badge-success {
+    @apply bg-emerald-100 text-emerald-700;
+  }
+  
+  .badge-warning {
+    @apply bg-amber-100 text-amber-700;
+  }
+  
+  .badge-danger {
+    @apply bg-red-100 text-red-700;
   }
 }
 
-/* ReactFlow Handle Styles - для визуальной обратной связи при подключении */
+/* ===== ReactFlow Handle Styles - Improved Connection System ===== */
+
+/* Base handle styling */
 .react-flow__handle {
-  transition: all 0.2s ease;
+  width: 12px !important;
+  height: 12px !important;
+  background: transparent !important;
+  border: 2px solid transparent !important;
+  border-radius: 50% !important;
+  transition: all 0.15s ease !important;
 }
 
-/* Показываем handles при наведении на узел */
+/* Show handles on node hover - subtle indication */
 .react-flow__node:hover .react-flow__handle {
-  opacity: 0.15 !important;
-  background: #3b82f6 !important;
+  background: #e0e7ff !important;
+  border-color: #6366f1 !important;
+  opacity: 1 !important;
 }
 
-/* Показываем handles при создании соединения */
-.react-flow__node.connecting .react-flow__handle,
-.react-flow__handle.connecting {
-  opacity: 0.3 !important;
-  background: #3b82f6 !important;
+/* When user starts dragging a connection */
+.react-flow__handle.connectingfrom,
+.react-flow__handle.connectingto {
+  background: #818cf8 !important;
+  border-color: #4f46e5 !important;
+  opacity: 1 !important;
 }
 
-/* Подсветка для валидного handle при подключении */
-.react-flow__handle.valid {
-  opacity: 0.6 !important;
-  background: #10b981 !important;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3);
+/* Valid drop target - green highlight */
+.react-flow__handle-valid {
+  background: #34d399 !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25) !important;
 }
 
-/* Подсветка для невалидного handle */
-.react-flow__handle.invalid {
-  opacity: 0.6 !important;
-  background: #ef4444 !important;
+/* When connecting - all potential targets */
+.connecting .react-flow__handle {
+  background: #c7d2fe !important;
+  border-color: #a5b4fc !important;
+  opacity: 1 !important;
 }
 
-/* Подсветка при выделении узла */
+/* Selected node handles */
 .react-flow__node.selected .react-flow__handle {
-  opacity: 0.2 !important;
-  background: #6366f1 !important;
+  background: #a5b4fc !important;
+  border-color: #6366f1 !important;
+  opacity: 1 !important;
+}
+
+/* Selected node border */
+.react-flow__node.selected > div {
+  box-shadow: 0 0 0 2px #6366f1 !important;
+}
+
+/* Edge selection */
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #6366f1 !important;
+  stroke-width: 3px !important;
+}
+
+/* Edge hover effect */
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 3px !important;
+}
+
+/* Controls flat styling */
+.react-flow__controls {
+  box-shadow: none !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  overflow: hidden !important;
+}
+
+.react-flow__controls-button {
+  background: white !important;
+  border: none !important;
+  border-bottom: 1px solid #e5e7eb !important;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+
+.react-flow__controls-button:hover {
+  background: #f3f4f6 !important;
+}
+
+/* MiniMap flat styling */
+.react-flow__minimap {
+  background: white !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+}
+
+/* Attribution hidden for cleaner look */
+.react-flow__attribution {
+  display: none !important;
+}
+
+/* Background dots */
+.react-flow__background {
+  background-color: #fafafa !important;
 }

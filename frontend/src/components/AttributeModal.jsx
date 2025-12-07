@@ -67,41 +67,41 @@ const AttributeModal = ({ isOpen, onClose, onSave, nodeData, isEntity = true }) 
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg border border-gray-200 w-full max-w-2xl max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="text-lg font-semibold text-gray-900">
-            Edit {isEntity ? 'Entity' : 'Relationship'}
+        <div className="flex items-center justify-between px-5 py-4 bg-gray-50 border-b">
+          <h3 className="text-base font-semibold text-gray-900">
+            Редактирование {isEntity ? 'сущности' : 'связи'}
           </h3>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="p-1.5 hover:bg-gray-200 rounded transition-colors"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5 text-gray-500" />
           </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-5 space-y-4">
           {/* Name Input */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Name
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Название
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder={`Enter ${isEntity ? 'entity' : 'relationship'} name`}
+              className="input"
+              placeholder={`Введите название ${isEntity ? 'сущности' : 'связи'}`}
             />
           </div>
 
           {/* Add Attribute */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Add Attribute
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Добавить атрибут
             </label>
             <div className="flex gap-2">
               <input
@@ -109,42 +109,42 @@ const AttributeModal = ({ isOpen, onClose, onSave, nodeData, isEntity = true }) 
                 value={newAttrName}
                 onChange={(e) => setNewAttrName(e.target.value)}
                 onKeyPress={handleKeyPress}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                placeholder="Attribute name"
+                className="input flex-1"
+                placeholder="Название атрибута"
               />
               {isEntity && (
-                <label className="flex items-center px-3 py-2 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50">
+                <label className="flex items-center px-3 py-2 border border-gray-200 rounded cursor-pointer hover:bg-gray-50">
                   <input
                     type="checkbox"
                     checked={newAttrIsPrimary}
                     onChange={(e) => setNewAttrIsPrimary(e.target.checked)}
                     className="mr-2"
                   />
-                  <Key className="h-4 w-4 mr-1 text-orange-600" />
+                  <Key className="h-4 w-4 mr-1 text-amber-600" />
                   <span className="text-sm">PK</span>
                 </label>
               )}
               <button
                 onClick={handleAddAttribute}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
+                className="btn btn-primary btn-md flex items-center"
               >
                 <Plus className="h-4 w-4 mr-1" />
-                Add
+                Добавить
               </button>
             </div>
           </div>
 
           {/* Attributes List */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Attributes ({attributes.length})
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Атрибуты ({attributes.length})
             </label>
             {attributes.length === 0 ? (
-              <div className="text-center py-8 text-gray-400 border-2 border-dashed rounded-lg">
-                No attributes yet. Add one above.
+              <div className="text-center py-8 text-gray-400 border-2 border-dashed border-gray-200 rounded">
+                Нет атрибутов. Добавьте выше.
               </div>
             ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto border rounded-lg p-2">
+              <div className="space-y-1.5 max-h-60 overflow-y-auto border border-gray-200 rounded p-2">
                 {attributes.map((attr, index) => (
                   <div
                     key={index}
@@ -156,30 +156,28 @@ const AttributeModal = ({ isOpen, onClose, onSave, nodeData, isEntity = true }) 
                           onClick={() => handleTogglePrimary(index)}
                           className={`p-1 rounded ${
                             attr.primary
-                              ? 'bg-orange-100 text-orange-600'
+                              ? 'bg-amber-100 text-amber-600'
                               : 'bg-gray-200 text-gray-400'
                           }`}
-                          title={attr.primary ? 'Primary Key' : 'Make Primary Key'}
+                          title={attr.primary ? 'Первичный ключ' : 'Сделать первичным ключом'}
                         >
                           <Key className="h-4 w-4" />
                         </button>
                       )}
                       <span
                         className={`font-medium ${
-                          attr.primary ? 'text-orange-600 underline' : 'text-gray-900'
+                          attr.primary ? 'text-amber-700 underline' : 'text-gray-900'
                         }`}
                       >
                         {attr.name}
                       </span>
                       {attr.primary && (
-                        <span className="text-xs font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded">
-                          PK
-                        </span>
+                        <span className="badge badge-warning">PK</span>
                       )}
                     </div>
                     <button
                       onClick={() => handleRemoveAttribute(index)}
-                      className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
+                      className="text-gray-400 hover:text-red-600 p-1 rounded hover:bg-red-50"
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -191,18 +189,18 @@ const AttributeModal = ({ isOpen, onClose, onSave, nodeData, isEntity = true }) 
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 p-4 border-t">
+        <div className="flex justify-end gap-2 px-5 py-4 bg-gray-50 border-t">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            className="btn btn-secondary btn-md"
           >
-            Cancel
+            Отмена
           </button>
           <button
             onClick={handleSave}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="btn btn-primary btn-md"
           >
-            Save Changes
+            Сохранить
           </button>
         </div>
       </div>

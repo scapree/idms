@@ -112,12 +112,12 @@ const ExportModal = ({
     pdf.setFontSize(24)
     pdf.text(projectName || 'Project Export', pageWidth / 2, 40, { align: 'center' })
     pdf.setFontSize(12)
-    pdf.text(`${diagrams.length} diagram${diagrams.length !== 1 ? 's' : ''}`, pageWidth / 2, 55, { align: 'center' })
-    pdf.text(`Exported: ${new Date().toLocaleDateString()}`, pageWidth / 2, 65, { align: 'center' })
+    pdf.text(`${diagrams.length} ${diagrams.length === 1 ? 'диаграмма' : diagrams.length < 5 ? 'диаграммы' : 'диаграмм'}`, pageWidth / 2, 55, { align: 'center' })
+    pdf.text(`Экспорт: ${new Date().toLocaleDateString()}`, pageWidth / 2, 65, { align: 'center' })
     
     // Table of contents
     pdf.setFontSize(14)
-    pdf.text('Contents:', 20, 90)
+    pdf.text('Содержание:', 20, 90)
     pdf.setFontSize(10)
     diagrams.forEach((diagram, idx) => {
       pdf.text(`${idx + 1}. ${diagram.name} (${diagram.diagram_type?.toUpperCase()})`, 25, 100 + idx * 8)
@@ -211,46 +211,46 @@ const ExportModal = ({
     <>
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+        className="fixed inset-0 bg-black/50 z-50"
         onClick={onClose}
       />
       
       {/* Modal */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
         <div 
-          className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden pointer-events-auto"
+          className="bg-white rounded-lg border border-gray-200 w-full max-w-md overflow-hidden pointer-events-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="px-6 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 text-white flex items-center justify-between">
+          <div className="px-5 py-4 bg-gray-50 border-b flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-white/10 rounded-lg">
-                <Download className="w-5 h-5" />
+              <div className="p-2 bg-emerald-100 rounded">
+                <Download className="w-5 h-5 text-emerald-600" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold">Export {mode === 'project' ? 'Project' : 'Diagram'}</h2>
-                <p className="text-sm text-white/80 truncate max-w-[200px]">
+                <h2 className="text-base font-semibold text-gray-900">Экспорт {mode === 'project' ? 'проекта' : 'диаграммы'}</h2>
+                <p className="text-sm text-gray-500 truncate max-w-[200px]">
                   {mode === 'project' ? projectName : diagramName}
                 </p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 hover:bg-white/10 rounded-lg transition-colors"
+              className="p-1.5 hover:bg-gray-200 rounded transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 text-gray-500" />
             </button>
           </div>
 
           {/* Content */}
-          <div className="p-6 space-y-5">
+          <div className="p-5 space-y-5">
             {/* Format Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Format</label>
+              <label className="text-sm font-medium text-gray-700">Формат</label>
               <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => setFormat('png')}
-                  className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                  className={`flex items-center justify-center gap-2 p-3 rounded border-2 transition-all ${
                     format === 'png' 
                       ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
                       : 'border-gray-200 hover:border-gray-300 text-gray-600'
@@ -261,7 +261,7 @@ const ExportModal = ({
                 </button>
                 <button
                   onClick={() => setFormat('pdf')}
-                  className={`flex items-center justify-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                  className={`flex items-center justify-center gap-2 p-3 rounded border-2 transition-all ${
                     format === 'pdf' 
                       ? 'border-emerald-500 bg-emerald-50 text-emerald-700' 
                       : 'border-gray-200 hover:border-gray-300 text-gray-600'
@@ -275,26 +275,26 @@ const ExportModal = ({
 
             {/* Quality Selection */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Quality</label>
+              <label className="text-sm font-medium text-gray-700">Качество</label>
               <div className="grid grid-cols-3 gap-2">
-                {['low', 'medium', 'high'].map((q) => (
+                {[{key: 'low', label: 'Низкое'}, {key: 'medium', label: 'Среднее'}, {key: 'high', label: 'Высокое'}].map((q) => (
                   <button
-                    key={q}
-                    onClick={() => setQuality(q)}
-                    className={`px-4 py-2 rounded-lg border transition-all capitalize ${
-                      quality === q
+                    key={q.key}
+                    onClick={() => setQuality(q.key)}
+                    className={`px-3 py-2 rounded border transition-all ${
+                      quality === q.key
                         ? 'border-emerald-500 bg-emerald-50 text-emerald-700 font-medium'
                         : 'border-gray-200 hover:border-gray-300 text-gray-600'
                     }`}
                   >
-                    {q}
+                    {q.label}
                   </button>
                 ))}
               </div>
               <p className="text-xs text-gray-400">
-                {quality === 'low' && 'Smaller file size, lower resolution'}
-                {quality === 'medium' && 'Balanced quality and file size'}
-                {quality === 'high' && 'Best quality, larger file size'}
+                {quality === 'low' && 'Меньший размер файла, низкое разрешение'}
+                {quality === 'medium' && 'Баланс качества и размера'}
+                {quality === 'high' && 'Лучшее качество, больший размер файла'}
               </p>
             </div>
 
@@ -308,61 +308,61 @@ const ExportModal = ({
                     onChange={(e) => setIncludeBackground(e.target.checked)}
                     className="sr-only"
                   />
-                  <div className={`w-10 h-6 rounded-full transition-colors ${
+                  <div className={`w-10 h-5 rounded-full transition-colors ${
                     includeBackground ? 'bg-emerald-500' : 'bg-gray-300'
                   }`}>
-                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                      includeBackground ? 'translate-x-5' : 'translate-x-1'
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                      includeBackground ? 'translate-x-5' : 'translate-x-0.5'
                     }`} />
                   </div>
                 </div>
-                <span className="text-sm text-gray-700 group-hover:text-gray-900">Include background</span>
+                <span className="text-sm text-gray-700 group-hover:text-gray-900">Включить фон</span>
               </label>
             </div>
 
             {/* Project Export Note */}
             {mode === 'project' && format === 'pdf' && (
-              <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
-                <p className="text-sm text-blue-700">
-                  PDF export will include a title page with contents list and the currently visible diagram.
+              <div className="p-3 bg-primary-50 border border-primary-100 rounded">
+                <p className="text-sm text-primary-700">
+                  PDF будет содержать титульную страницу с оглавлением и текущую диаграмму.
                 </p>
               </div>
             )}
 
             {/* Export Result */}
             {exportedFiles.length > 0 && (
-              <div className="p-3 bg-green-50 border border-green-100 rounded-lg flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                <div className="text-sm text-green-700">
-                  <span className="font-medium">Exported successfully!</span>
-                  <p className="text-green-600 truncate">{exportedFiles.join(', ')}</p>
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                <div className="text-sm text-emerald-700">
+                  <span className="font-medium">Экспорт завершён!</span>
+                  <p className="text-emerald-600 truncate">{exportedFiles.join(', ')}</p>
                 </div>
               </div>
             )}
           </div>
 
           {/* Footer */}
-          <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-3">
+          <div className="px-5 py-4 bg-gray-50 border-t flex justify-end gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+              className="btn btn-secondary btn-md"
             >
-              Cancel
+              Отмена
             </button>
             <button
               onClick={handleExport}
               disabled={isExporting}
-              className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-sm font-medium rounded-lg hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm hover:shadow"
+              className="btn btn-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {isExporting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Exporting...
+                  Экспорт...
                 </>
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  Export
+                  Экспорт
                 </>
               )}
             </button>

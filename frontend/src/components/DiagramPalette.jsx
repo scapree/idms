@@ -25,69 +25,69 @@ const EVENT_STYLES = {
 }
 
 const EVENT_VARIANTS = [
-  { key: 'none', icon: 'Circle', label: 'None' },
-  { key: 'message', icon: 'Mail', label: 'Message' },
-  { key: 'timer', icon: 'Clock', label: 'Timer' },
-  { key: 'conditional', icon: 'HelpCircle', label: 'Conditional' },
-  { key: 'signal', icon: 'Radio', label: 'Signal' },
-  { key: 'escalation', icon: 'TrendingUp', label: 'Escalation' },
-  { key: 'error', icon: 'AlertCircle', label: 'Error' },
-  { key: 'compensation', icon: 'Undo2', label: 'Compensation' },
-  { key: 'cancel', icon: 'Ban', label: 'Cancel' },
-  { key: 'link', icon: 'Link', label: 'Link' },
-  { key: 'multiple', icon: 'Sparkles', label: 'Multiple' },
-  { key: 'parallel-multiple', icon: 'PlusCircle', label: 'Parallel Multiple' },
+  { key: 'none', icon: 'Circle', label: 'Простое' },
+  { key: 'message', icon: 'Mail', label: 'Сообщение' },
+  { key: 'timer', icon: 'Clock', label: 'Таймер' },
+  { key: 'conditional', icon: 'HelpCircle', label: 'Условие' },
+  { key: 'signal', icon: 'Radio', label: 'Сигнал' },
+  { key: 'escalation', icon: 'TrendingUp', label: 'Эскалация' },
+  { key: 'error', icon: 'AlertCircle', label: 'Ошибка' },
+  { key: 'compensation', icon: 'Undo2', label: 'Компенсация' },
+  { key: 'cancel', icon: 'Ban', label: 'Отмена' },
+  { key: 'link', icon: 'Link', label: 'Ссылка' },
+  { key: 'multiple', icon: 'Sparkles', label: 'Множественное' },
+  { key: 'parallel-multiple', icon: 'PlusCircle', label: 'Параллельное множ.' },
 ]
 
 const TASK_VARIANTS = [
-  { id: 'task', name: 'Task', icon: 'Square', color: '#2563eb' },
-  { id: 'user-task', name: 'User Task', icon: 'User', color: '#0ea5e9' },
-  { id: 'service-task', name: 'Service Task', icon: 'Cog', color: '#7c3aed' },
-  { id: 'script-task', name: 'Script Task', icon: 'FileCode', color: '#f59e0b' },
-  { id: 'manual-task', name: 'Manual Task', icon: 'Hand', color: '#f97316' },
-  { id: 'send-task', name: 'Send Task', icon: 'Send', color: '#6366f1' },
-  { id: 'receive-task', name: 'Receive Task', icon: 'Download', color: '#22c55e' },
-  { id: 'business-rule-task', name: 'Business Rule Task', icon: 'Scale', color: '#d946ef' },
-  { id: 'call-activity', name: 'Call Activity', icon: 'PhoneCall', color: '#f43f5e', extra: { borderWidth: 4 } },
-  { id: 'subprocess-collapsed', name: 'Subprocess (Collapsed)', icon: 'Library', color: '#14b8a6', extra: { label: 'Subprocess (+)', fontSize: 12 } },
-  { id: 'event-subprocess', name: 'Event Subprocess', icon: 'Zap', color: '#0ea5e9', extra: { borderStyle: 'dashed' } },
+  { id: 'task', name: 'Задача', icon: 'Square', color: '#2563eb' },
+  { id: 'user-task', name: 'Пользовательская', icon: 'User', color: '#0ea5e9' },
+  { id: 'service-task', name: 'Сервисная', icon: 'Cog', color: '#7c3aed' },
+  { id: 'script-task', name: 'Скриптовая', icon: 'FileCode', color: '#f59e0b' },
+  { id: 'manual-task', name: 'Ручная', icon: 'Hand', color: '#f97316' },
+  { id: 'send-task', name: 'Отправка', icon: 'Send', color: '#6366f1' },
+  { id: 'receive-task', name: 'Получение', icon: 'Download', color: '#22c55e' },
+  { id: 'business-rule-task', name: 'Бизнес-правило', icon: 'Scale', color: '#d946ef' },
+  { id: 'call-activity', name: 'Вызов активности', icon: 'PhoneCall', color: '#f43f5e', extra: { borderWidth: 4 } },
+  { id: 'subprocess-collapsed', name: 'Подпроцесс (сверн.)', icon: 'Library', color: '#14b8a6', extra: { label: 'Подпроцесс (+)', fontSize: 12 } },
+  { id: 'event-subprocess', name: 'Событийный подпроц.', icon: 'Zap', color: '#0ea5e9', extra: { borderStyle: 'dashed' } },
 ]
 
 const GATEWAYS = [
-  { id: 'exclusive-gateway', name: 'Exclusive Gateway', icon: 'X', color: '#f97316' },
-  { id: 'inclusive-gateway', name: 'Inclusive Gateway', icon: 'Circle', color: '#6366f1' },
-  { id: 'parallel-gateway', name: 'Parallel Gateway', icon: 'Plus', color: '#22c55e' },
-  { id: 'complex-gateway', name: 'Complex Gateway', icon: 'Sparkles', color: '#8b5cf6' },
-  { id: 'exclusive-event-gateway', name: 'Event-based Gateway', icon: 'CircleDot', color: '#0ea5e9' },
-  { id: 'parallel-event-gateway', name: 'Parallel Event Gateway', icon: 'Equal', color: '#22d3ee' },
+  { id: 'exclusive-gateway', name: 'Исключающий шлюз', icon: 'X', color: '#f97316' },
+  { id: 'inclusive-gateway', name: 'Включающий шлюз', icon: 'Circle', color: '#6366f1' },
+  { id: 'parallel-gateway', name: 'Параллельный шлюз', icon: 'Plus', color: '#22c55e' },
+  { id: 'complex-gateway', name: 'Сложный шлюз', icon: 'Sparkles', color: '#8b5cf6' },
+  { id: 'exclusive-event-gateway', name: 'Событийный шлюз', icon: 'CircleDot', color: '#0ea5e9' },
+  { id: 'parallel-event-gateway', name: 'Парал. событийный', icon: 'Equal', color: '#22d3ee' },
 ]
 
 const DATA_OBJECTS = [
-  { id: 'data-object', name: 'Data Object', icon: 'FileText', color: '#38bdf8' },
-  { id: 'data-collection', name: 'Data Collection', icon: 'Files', color: '#6366f1' },
-  { id: 'data-input', name: 'Data Input', icon: 'ArrowDownToLine', color: '#22c55e' },
-  { id: 'data-output', name: 'Data Output', icon: 'ArrowUpFromLine', color: '#f97316' },
-  { id: 'data-store', name: 'Data Store', icon: 'Database', color: '#14b8a6', shape: 'cylinder' },
+  { id: 'data-object', name: 'Объект данных', icon: 'FileText', color: '#38bdf8' },
+  { id: 'data-collection', name: 'Коллекция данных', icon: 'Files', color: '#6366f1' },
+  { id: 'data-input', name: 'Входные данные', icon: 'ArrowDownToLine', color: '#22c55e' },
+  { id: 'data-output', name: 'Выходные данные', icon: 'ArrowUpFromLine', color: '#f97316' },
+  { id: 'data-store', name: 'Хранилище данных', icon: 'Database', color: '#14b8a6', shape: 'cylinder' },
 ]
 
 const ARTIFACTS = [
-  { id: 'group', name: 'Group', icon: 'Layers', color: '#4b5563', extra: { borderStyle: 'dashed', borderWidth: 2 } },
-  { id: 'text-annotation', name: 'Text Annotation', icon: 'StickyNote', color: '#facc15', shape: 'annotation' },
+  { id: 'group', name: 'Группа', icon: 'Layers', color: '#4b5563', extra: { borderStyle: 'dashed', borderWidth: 2 } },
+  { id: 'text-annotation', name: 'Аннотация', icon: 'StickyNote', color: '#facc15', shape: 'annotation' },
 ]
 
 const SWIMLANES = [
-  { id: 'pool', name: 'Pool', icon: 'LayoutPanelTop', color: '#94a3b8', shape: 'lane', nodeConfig: { width: 500, height: 200, header: 'Participant', headerPosition: 'left', headerBackground: '#e2e8f0', isContainer: true, containerShape: 'pool' } },
-  { id: 'lane', name: 'Lane', icon: 'LayoutPanelLeft', color: '#cbd5f5', shape: 'lane', nodeConfig: { width: 500, height: 120, header: 'Lane', headerPosition: 'top', headerBackground: '#e5e7eb', isContainer: true, containerShape: 'lane' } },
+  { id: 'pool', name: 'Пул', icon: 'LayoutPanelTop', color: '#94a3b8', shape: 'lane', nodeConfig: { width: 500, height: 200, header: 'Участник', headerPosition: 'left', headerBackground: '#e2e8f0', isContainer: true, containerShape: 'pool' } },
+  { id: 'lane', name: 'Дорожка', icon: 'LayoutPanelLeft', color: '#cbd5f5', shape: 'lane', nodeConfig: { width: 500, height: 120, header: 'Дорожка', headerPosition: 'top', headerBackground: '#e5e7eb', isContainer: true, containerShape: 'lane' } },
 ]
 
 const BPMN_CONNECTORS = [
-  { id: 'sequence-flow', name: 'Sequence Flow', connectionType: 'sequence-flow', description: 'Control flow', icon: 'ArrowRight' },
-  { id: 'default-flow', name: 'Default Flow', connectionType: 'default-flow', description: 'Default path', icon: 'ArrowBigRight' },
-  { id: 'conditional-flow', name: 'Conditional Flow', connectionType: 'conditional-flow', description: 'With condition', icon: 'HelpCircle' },
-  { id: 'message-flow', name: 'Message Flow', connectionType: 'message-flow', description: 'Across pools', icon: 'Mail' },
-  { id: 'association', name: 'Association', connectionType: 'association', description: 'Artifact link', icon: 'Slash' },
-  { id: 'data-association', name: 'Data Association', connectionType: 'data-association', description: 'Data flow', icon: 'ArrowUpRight' },
-  { id: 'compensation-flow', name: 'Compensation', connectionType: 'compensation-flow', description: 'Undo action', icon: 'Undo2' },
+  { id: 'sequence-flow', name: 'Поток управления', connectionType: 'sequence-flow', description: 'Последовательность', icon: 'ArrowRight' },
+  { id: 'default-flow', name: 'Поток по умолч.', connectionType: 'default-flow', description: 'Путь по умолчанию', icon: 'ArrowBigRight' },
+  { id: 'conditional-flow', name: 'Условный поток', connectionType: 'conditional-flow', description: 'С условием', icon: 'HelpCircle' },
+  { id: 'message-flow', name: 'Поток сообщений', connectionType: 'message-flow', description: 'Между пулами', icon: 'Mail' },
+  { id: 'association', name: 'Ассоциация', connectionType: 'association', description: 'Связь артефакта', icon: 'Slash' },
+  { id: 'data-association', name: 'Поток данных', connectionType: 'data-association', description: 'Передача данных', icon: 'ArrowUpRight' },
+  { id: 'compensation-flow', name: 'Компенсация', connectionType: 'compensation-flow', description: 'Откат действия', icon: 'Undo2' },
 ]
 
 const createEventElement = (stage, variant) => {
@@ -110,9 +110,15 @@ const createEventElement = (stage, variant) => {
   }
 }
 
+const STAGE_TITLES = {
+  start: 'Начальные события',
+  intermediate: 'Промежуточные события', 
+  end: 'Конечные события',
+}
+
 const buildBpmnGroups = () => {
   const eventGroups = ['start', 'intermediate', 'end'].map((stage) => ({
-    title: `${capitalize(stage)} Events`,
+    title: STAGE_TITLES[stage],
     items: EVENT_VARIANTS.map((variant) => createEventElement(stage, variant)),
   }))
 
@@ -158,10 +164,10 @@ const buildBpmnGroups = () => {
 
   return [
     ...eventGroups,
-    { title: 'Activities', items: activities },
-    { title: 'Gateways', items: gateways },
-    { title: 'Data & Stores', items: dataObjects },
-    { title: 'Pools & Lanes', items: swimlanes },
+    { title: 'Активности', items: activities },
+    { title: 'Шлюзы', items: gateways },
+    { title: 'Данные', items: dataObjects },
+    { title: 'Пулы и дорожки', items: swimlanes },
   ]
 }
 
@@ -173,11 +179,11 @@ const buildErdConfiguration = () => {
   const entities = [
     {
       id: 'erd-entity',
-      name: 'Entity',
+      name: 'Сущность',
       paletteIcon: 'Square',
       previewColor: '#2563eb',
       nodeConfig: {
-        label: 'Entity', shape: 'entity', width: 200, height: 160,
+        label: 'Сущность', shape: 'entity', width: 200, height: 160,
         background: '#ffffff', borderColor: '#2563eb', borderWidth: 2,
         textColor: '#0f172a', attributes: [],
         handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
@@ -185,9 +191,8 @@ const buildErdConfiguration = () => {
     },
   ]
 
-  // Возвращаем пустой массив connectors, так как вы просили убрать их из сайдбара
   return {
-    groups: [{ title: 'Entities', items: entities }],
+    groups: [{ title: 'Сущности', items: entities }],
     connectorsTitle: null,
     connectors: [],
   }
@@ -204,11 +209,11 @@ const buildDfdConfiguration = () => {
     const elements = [
         {
             id: 'dfd-process',
-            name: 'Process',
+            name: 'Процесс',
             paletteIcon: 'Circle',
             previewColor: primaryColor,
             nodeConfig: {
-                label: 'Process',
+                label: 'Процесс',
                 shape: 'circle', // Круг
                 width: 100, height: 100,
                 background: primaryBg,
@@ -220,11 +225,11 @@ const buildDfdConfiguration = () => {
         },
         {
             id: 'dfd-external-entity',
-            name: 'External Entity',
+            name: 'Внешняя сущность',
             paletteIcon: 'Square',
             previewColor: '#64748b',
             nodeConfig: {
-                label: 'External Entity',
+                label: 'Внешняя сущность',
                 shape: 'rectangle', // Прямоугольник
                 width: 140, height: 80,
                 background: '#f1f5f9',
@@ -237,11 +242,11 @@ const buildDfdConfiguration = () => {
         },
         {
             id: 'dfd-data-store',
-            name: 'Data Store',
+            name: 'Хранилище данных',
             paletteIcon: 'StretchHorizontal', // Иконка похожая на две линии
             previewColor: primaryColor,
             nodeConfig: {
-                label: 'Data Store',
+                label: 'Хранилище',
                 shape: 'data-store', // Кастомная форма (линии)
                 width: 160, height: 60,
                 background: 'transparent',
@@ -256,18 +261,18 @@ const buildDfdConfiguration = () => {
     const connectors = [
         {
             id: 'dfd-data-flow',
-            name: 'Data Flow',
+            name: 'Поток данных',
             connectionType: 'data-flow',
-            description: 'Movement of data',
+            description: 'Передача данных',
             icon: 'ArrowRight',
         }
     ]
 
     return {
         groups: [
-            { title: 'DFD Elements', items: elements },
+            { title: 'Элементы DFD', items: elements },
         ],
-        connectorsTitle: 'Connections',
+        connectorsTitle: 'Связи',
         connectors: connectors
     }
 }
@@ -281,7 +286,7 @@ const DiagramPalette = ({ diagramType, selectedConnectionType, onConnectionTypeC
     if (diagramType === 'bpmn') {
       return {
         groups: buildBpmnGroups(),
-        connectorsTitle: 'Connecting Objects',
+        connectorsTitle: 'Соединения',
         connectors: BPMN_CONNECTORS,
       }
     }
@@ -345,7 +350,7 @@ const DiagramPalette = ({ diagramType, selectedConnectionType, onConnectionTypeC
         key={connector.id}
         type="button"
         onClick={() => onConnectionTypeChange?.(connector.connectionType)}
-        className={`w-full text-left px-3 py-2 rounded-lg border transition-colors ${
+        className={`w-full text-left px-3 py-2 rounded border transition-colors ${
           isSelected
             ? 'border-primary-500 bg-primary-50 text-primary-700'
             : 'border-gray-200 bg-white hover:bg-gray-50 text-gray-700'
@@ -353,15 +358,15 @@ const DiagramPalette = ({ diagramType, selectedConnectionType, onConnectionTypeC
       >
         <div className="flex items-center space-x-3">
           <div
-            className={`w-8 h-8 rounded flex items-center justify-center ${
-              isSelected ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-600'
+            className={`w-7 h-7 rounded flex items-center justify-center ${
+              isSelected ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-500'
             }`}
           >
-            {connectorIcon ? React.createElement(connectorIcon, { className: 'h-4 w-4' }) : <FallbackIcon className="h-4 w-4" />}
+            {connectorIcon ? React.createElement(connectorIcon, { className: 'h-3.5 w-3.5' }) : <FallbackIcon className="h-3.5 w-3.5" />}
           </div>
           <div>
-            <div className="text-sm font-semibold">{connector.name}</div>
-            <div className="text-xs text-gray-500">{connector.description}</div>
+            <div className="text-sm font-medium">{connector.name}</div>
+            <div className="text-xs text-gray-400">{connector.description}</div>
           </div>
         </div>
       </button>
@@ -370,30 +375,30 @@ const DiagramPalette = ({ diagramType, selectedConnectionType, onConnectionTypeC
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-4 border-b bg-gray-50">
-        <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
-          {diagramType?.toUpperCase()} Elements
+      <div className="p-4 border-b border-gray-200 bg-white">
+        <h2 className="text-xs font-semibold text-gray-900 uppercase tracking-wide">
+          Элементы {diagramType?.toUpperCase()}
         </h2>
-        <p className="text-xs text-gray-500 mt-1">
-          Drag nodes or select connection type
+        <p className="text-xs text-gray-400 mt-0.5">
+          Перетащите элемент или выберите тип связи
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
         {configuration.groups.map((group) => {
           const isCollapsed = collapsedGroups[group.title]
           return (
-            <div key={group.title} className="space-y-2">
+            <div key={group.title} className="space-y-1.5">
               <div 
-                className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded"
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-100 px-2 py-1.5 rounded transition-colors"
                 onClick={() => toggleGroup(group.title)}
               >
-                <h3 className="text-xs font-semibold text-gray-500 uppercase">{group.title}</h3>
-                {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{group.title}</h3>
+                {isCollapsed ? <ChevronRight size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
               </div>
               
               {!isCollapsed && (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {group.items.map((element) => {
                     const iconName = element.paletteIcon
                     const IconComponent = element.icon || (iconName && Icons[iconName] ? Icons[iconName] : Square)
@@ -402,13 +407,13 @@ const DiagramPalette = ({ diagramType, selectedConnectionType, onConnectionTypeC
                         key={element.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, element)}
-                        className="flex items-center space-x-3 p-2 rounded border border-gray-200 bg-white hover:border-primary-400 hover:shadow-sm cursor-move transition-all"
+                        className="flex items-center space-x-3 p-2 rounded border border-gray-200 bg-white hover:border-primary-400 cursor-move transition-colors"
                       >
                         <div
-                          className="w-8 h-8 rounded flex items-center justify-center text-white shadow-sm"
+                          className="w-7 h-7 rounded flex items-center justify-center text-white"
                           style={{ backgroundColor: element.previewColor || '#64748b' }}
                         >
-                          <IconComponent className="h-4 w-4" />
+                          <IconComponent className="h-3.5 w-3.5" />
                         </div>
                         <span className="text-sm text-gray-700">{element.name}</span>
                       </div>
@@ -421,18 +426,18 @@ const DiagramPalette = ({ diagramType, selectedConnectionType, onConnectionTypeC
         })}
 
         {configuration.connectors && configuration.connectors.length > 0 && (
-          <div className="space-y-2 pt-4 border-t">
+          <div className="space-y-1.5 pt-3 border-t border-gray-200">
             <div 
-              className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded"
+              className="flex items-center justify-between cursor-pointer hover:bg-gray-100 px-2 py-1.5 rounded transition-colors"
               onClick={() => toggleGroup(configuration.connectorsTitle)}
             >
-              <h3 className="text-xs font-semibold text-gray-500 uppercase">
-                {configuration.connectorsTitle || 'Connectors'}
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                {configuration.connectorsTitle || 'Соединения'}
               </h3>
-              {collapsedGroups[configuration.connectorsTitle] ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+              {collapsedGroups[configuration.connectorsTitle] ? <ChevronRight size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
             </div>
             {!collapsedGroups[configuration.connectorsTitle] && (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {configuration.connectors.map(renderConnector)}
               </div>
             )}

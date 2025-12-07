@@ -27,7 +27,7 @@ const RegisterPage = () => {
     setIsLoading(false)
     
     if (result.success) {
-      toast.success('Registration successful! Please log in.')
+      toast.success('Регистрация успешна! Войдите в систему.')
       // Pass along the redirect URL if it exists
       const from = location.state?.from
       navigate('/login', from ? { state: { from } } : {})
@@ -38,36 +38,36 @@ const RegisterPage = () => {
 
   return (
     <div className="h-full flex items-center justify-center bg-gray-50 px-4 sm:px-6 lg:px-8 overflow-auto">
-      <div className="max-w-md w-full space-y-8 py-8">
-        <div>
-          <h2 className="text-center text-3xl font-extrabold text-gray-900">
-            Create your account
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <Link
-              to="/login"
-              className="font-medium text-primary-600 hover:text-primary-500"
-            >
-              sign in to existing account
-            </Link>
-          </p>
-        </div>
-        
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
-          <div className="space-y-4">
+      <div className="max-w-sm w-full py-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-bold text-gray-900">
+              Создание аккаунта
+            </h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Или{' '}
+              <Link
+                to="/login"
+                className="font-medium text-primary-600 hover:text-primary-700"
+              >
+                войдите в существующий
+              </Link>
+            </p>
+          </div>
+          
+          <form className="space-y-4" onSubmit={handleSubmit(onSubmit)}>
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                Username
+              <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1.5">
+                Имя пользователя
               </label>
               <input
                 {...register('username', { 
-                  required: 'Username is required',
-                  minLength: { value: 3, message: 'Username must be at least 3 characters' }
+                  required: 'Введите имя пользователя',
+                  minLength: { value: 3, message: 'Минимум 3 символа' }
                 })}
                 type="text"
-                className="mt-1 input"
-                placeholder="Choose a username"
+                className="input"
+                placeholder="Придумайте имя пользователя"
               />
               {errors.username && (
                 <p className="mt-1 text-sm text-red-600">{errors.username.message}</p>
@@ -75,20 +75,20 @@ const RegisterPage = () => {
             </div>
             
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
                 Email
               </label>
               <input
                 {...register('email', { 
-                  required: 'Email is required',
+                  required: 'Введите email',
                   pattern: {
                     value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: 'Invalid email address'
+                    message: 'Некорректный email адрес'
                   }
                 })}
                 type="email"
-                className="mt-1 input"
-                placeholder="Enter your email"
+                className="input"
+                placeholder="Введите email"
               />
               {errors.email && (
                 <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
@@ -96,18 +96,18 @@ const RegisterPage = () => {
             </div>
             
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                Password
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+                Пароль
               </label>
-              <div className="mt-1 relative">
+              <div className="relative">
                 <input
                   {...register('password', { 
-                    required: 'Password is required',
-                    minLength: { value: 6, message: 'Password must be at least 6 characters' }
+                    required: 'Введите пароль',
+                    minLength: { value: 6, message: 'Минимум 6 символов' }
                   })}
                   type={showPassword ? 'text' : 'password'}
                   className="input pr-10"
-                  placeholder="Create a password"
+                  placeholder="Придумайте пароль"
                 />
                 <button
                   type="button"
@@ -115,9 +115,9 @@ const RegisterPage = () => {
                   onClick={() => setShowPassword(!showPassword)}
                 >
                   {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
+                    <EyeOff className="h-4 w-4 text-gray-400" />
                   ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
+                    <Eye className="h-4 w-4 text-gray-400" />
                   )}
                 </button>
               </div>
@@ -127,41 +127,39 @@ const RegisterPage = () => {
             </div>
             
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                Confirm Password
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1.5">
+                Подтверждение пароля
               </label>
               <input
                 {...register('confirmPassword', { 
-                  required: 'Please confirm your password',
-                  validate: value => value === password || 'Passwords do not match'
+                  required: 'Подтвердите пароль',
+                  validate: value => value === password || 'Пароли не совпадают'
                 })}
                 type="password"
-                className="mt-1 input"
-                placeholder="Confirm your password"
+                className="input"
+                placeholder="Повторите пароль"
               />
               {errors.confirmPassword && (
                 <p className="mt-1 text-sm text-red-600">{errors.confirmPassword.message}</p>
               )}
             </div>
-          </div>
 
-          <div>
             <button
               type="submit"
               disabled={isLoading}
-              className="btn btn-primary btn-lg w-full"
+              className="btn btn-primary btn-md w-full mt-2"
             >
               {isLoading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
               ) : (
                 <>
                   <UserPlus className="h-4 w-4 mr-2" />
-                  Create account
+                  Создать аккаунт
                 </>
               )}
             </button>
-          </div>
-        </form>
+          </form>
+        </div>
       </div>
     </div>
   )

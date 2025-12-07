@@ -158,7 +158,7 @@ const ShapeNode = ({ data = {} }) => {
                         </div>
                     ))}
                     {(!data.attributes || data.attributes.length === 0) && (
-                        <div className="text-xs text-gray-400 italic text-center">Right-click to add</div>
+                        <div className="text-xs text-gray-400 italic text-center">ПКМ для добавления</div>
                     )}
                 </div>
             ) : (
@@ -228,23 +228,23 @@ const ShapeNode = ({ data = {} }) => {
     return base
   }
 
-  // Link indicator badge
+  // Link indicator badge - flat style
   const renderLinkBadge = () => {
     if (!hasLink) return null
     
     const displayCount = linkCount > 1
     const tooltipText = linkCount > 1 
-      ? `${linkCount} links (click to go, right-click for all)`
-      : `Click to go to ${linkedDiagramName}`
+      ? `${linkCount} связей (клик для перехода, ПКМ для списка)`
+      : `Перейти к ${linkedDiagramName}`
     
     return (
       <div 
         onClick={handleBadgeClick}
-        className="absolute -top-2 -right-2 z-20 flex items-center justify-center bg-indigo-500 rounded-full shadow-lg cursor-pointer group/badge transition-all hover:scale-110 hover:bg-indigo-600 active:scale-95"
+        className="absolute -top-2 -right-2 z-20 flex items-center justify-center bg-primary-500 border-2 border-white rounded cursor-pointer group/badge transition-all hover:bg-primary-600 active:bg-primary-700"
         style={{ 
-          minWidth: 24, 
-          height: 24,
-          padding: displayCount ? '0 6px' : 0
+          minWidth: 22, 
+          height: 22,
+          padding: displayCount ? '0 5px' : 0
         }}
         title={tooltipText}
       >
@@ -254,7 +254,7 @@ const ShapeNode = ({ data = {} }) => {
           <ExternalLink className="w-3 h-3 text-white" />
         )}
         {/* Tooltip on hover */}
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover/badge:opacity-100 transition-opacity pointer-events-none">
+        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover/badge:opacity-100 transition-opacity pointer-events-none">
           {tooltipText}
         </div>
       </div>
@@ -276,12 +276,11 @@ const ShapeNode = ({ data = {} }) => {
       {renderByShape()}
       {renderLinkBadge()}
       
-      {/* Subtle glow effect for linked nodes */}
+      {/* Selection/link indicator border for linked nodes */}
       {hasLink && (
         <div 
-          className="absolute inset-0 rounded-lg pointer-events-none"
+          className="absolute inset-0 pointer-events-none border-2 border-primary-400"
           style={{
-            boxShadow: '0 0 0 2px rgba(99, 102, 241, 0.3)',
             borderRadius: shape === 'circle' ? '50%' : borderRadius,
           }}
         />
