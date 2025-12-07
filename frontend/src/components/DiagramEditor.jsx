@@ -14,12 +14,13 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { useMutation, useQueryClient, useQuery } from 'react-query'
 import { diagramsAPI } from '../api'
-import { Save, CheckCircle2, Link2, ExternalLink, Unlink, ArrowUpRight } from 'lucide-react'
+import { Save, CheckCircle2, Link2, ExternalLink, Unlink, ArrowUpRight, HelpCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ShapeNode from './nodes/ShapeNode'
 import ERDEdge from './edges/ERDEdge'
 import AttributeModal from './AttributeModal'
 import LinkDiagramModal from './LinkDiagramModal'
+import KeyboardShortcutsModal from './KeyboardShortcutsModal'
 
 // --- CONSTANTS ---
 const createUniqueId = (prefix = 'id') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -134,9 +135,11 @@ const DiagramEditorContent = ({
   const [contextMenu, setContextMenu] = useState(null)
   const [attributeModal, setAttributeModal] = useState({ isOpen: false, node: null })
   const [linkModal, setLinkModal] = useState({ isOpen: false, node: null })
+  const [showShortcuts, setShowShortcuts] = useState(false)
   const saveTimeoutRef = useRef(null)
   const isDirtyRef = useRef(false)
   const lastSavedDataRef = useRef(null)
+  const clipboardRef = useRef({ nodes: [], edges: [] })
 
   const nodeTypes = useMemo(() => ({ shape: ShapeNode }), [])
   const edgeTypes = useMemo(() => ({ erd: ERDEdge }), [])
@@ -602,20 +605,280 @@ const DiagramEditorContent = ({
     }
   }, [setForceSaveRef, handleSave])
 
-  // Manual save handler (for keyboard shortcut)
+  // --- KEYBOARD SHORTCUTS ---
+  
+  // Delete selected elements
+  const handleDeleteSelected = useCallback(() => {
+    if (isLocked) return
+    const selectedNodes = reactFlowInstance.getNodes().filter(n => n.selected)
+    const selectedEdges = reactFlowInstance.getEdges().filter(e => e.selected)
+    
+    if (selectedNodes.length === 0 && selectedEdges.length === 0) return
+    
+    markDirty()
+    const nodeIds = new Set(selectedNodes.map(n => n.id))
+    
+    // Delete links for selected nodes
+    selectedNodes.forEach(node => {
+      const links = elementLinksMap.get(node.id)
+      if (links) {
+        links.forEach(link => deleteLinkMutation.mutate(link.id))
+      }
+    })
+    
+    setNodes(nds => nds.filter(n => !nodeIds.has(n.id)))
+    setEdges(eds => eds.filter(e => !selectedEdges.some(se => se.id === e.id) && !nodeIds.has(e.source) && !nodeIds.has(e.target)))
+  }, [isLocked, reactFlowInstance, setNodes, setEdges, markDirty, elementLinksMap, deleteLinkMutation])
+
+  // Select all elements
+  const handleSelectAll = useCallback(() => {
+    setNodes(nds => nds.map(n => ({ ...n, selected: true })))
+    setEdges(eds => eds.map(e => ({ ...e, selected: true })))
+  }, [setNodes, setEdges])
+
+  // Deselect all elements
+  const handleDeselectAll = useCallback(() => {
+    setNodes(nds => nds.map(n => ({ ...n, selected: false })))
+    setEdges(eds => eds.map(e => ({ ...e, selected: false })))
+  }, [setNodes, setEdges])
+
+  // Copy selected elements
+  const handleCopy = useCallback(() => {
+    const selectedNodes = reactFlowInstance.getNodes().filter(n => n.selected)
+    const selectedEdges = reactFlowInstance.getEdges().filter(e => e.selected)
+    
+    if (selectedNodes.length === 0) return
+    
+    clipboardRef.current = {
+      nodes: selectedNodes.map(cleanNodeForSave),
+      edges: selectedEdges.filter(e => 
+        selectedNodes.some(n => n.id === e.source) && 
+        selectedNodes.some(n => n.id === e.target)
+      ).map(cleanEdgeForSave)
+    }
+    
+    toast.success(`Copied ${selectedNodes.length} element${selectedNodes.length !== 1 ? 's' : ''}`)
+  }, [reactFlowInstance])
+
+  // Paste elements
+  const handlePaste = useCallback(() => {
+    if (isLocked) return
+    if (clipboardRef.current.nodes.length === 0) return
+    
+    const idMap = new Map()
+    const offset = 50
+    
+    const newNodes = clipboardRef.current.nodes.map(node => {
+      const newId = createUniqueId('node')
+      idMap.set(node.id, newId)
+      return {
+        ...node,
+        id: newId,
+        position: {
+          x: node.position.x + offset,
+          y: node.position.y + offset
+        },
+        selected: true
+      }
+    })
+    
+    const newEdges = clipboardRef.current.edges.map(edge => ({
+      ...edge,
+      id: createUniqueId('edge'),
+      source: idMap.get(edge.source),
+      target: idMap.get(edge.target),
+      selected: true
+    }))
+    
+    // Update clipboard positions for next paste
+    clipboardRef.current = {
+      nodes: clipboardRef.current.nodes.map(n => ({
+        ...n,
+        position: { x: n.position.x + offset, y: n.position.y + offset }
+      })),
+      edges: clipboardRef.current.edges
+    }
+    
+    markDirty()
+    setNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes])
+    setEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges])
+    
+    toast.success(`Pasted ${newNodes.length} element${newNodes.length !== 1 ? 's' : ''}`)
+  }, [isLocked, setNodes, setEdges, markDirty])
+
+  // Duplicate selected elements
+  const handleDuplicate = useCallback(() => {
+    if (isLocked) return
+    
+    const selectedNodes = reactFlowInstance.getNodes().filter(n => n.selected)
+    const selectedEdges = reactFlowInstance.getEdges().filter(e => e.selected)
+    
+    if (selectedNodes.length === 0) return
+    
+    const idMap = new Map()
+    const offset = 50
+    
+    const newNodes = selectedNodes.map(node => {
+      const newId = createUniqueId('node')
+      idMap.set(node.id, newId)
+      return {
+        ...cleanNodeForSave(node),
+        id: newId,
+        position: {
+          x: node.position.x + offset,
+          y: node.position.y + offset
+        },
+        selected: true
+      }
+    })
+    
+    const newEdges = selectedEdges
+      .filter(e => selectedNodes.some(n => n.id === e.source) && selectedNodes.some(n => n.id === e.target))
+      .map(edge => ({
+        ...cleanEdgeForSave(edge),
+        id: createUniqueId('edge'),
+        source: idMap.get(edge.source),
+        target: idMap.get(edge.target),
+        selected: true
+      }))
+    
+    markDirty()
+    setNodes(nds => [...nds.map(n => ({ ...n, selected: false })), ...newNodes])
+    setEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges])
+    
+    toast.success(`Duplicated ${newNodes.length} element${newNodes.length !== 1 ? 's' : ''}`)
+  }, [isLocked, reactFlowInstance, setNodes, setEdges, markDirty])
+
+  // Zoom handlers
+  const handleZoomIn = useCallback(() => {
+    reactFlowInstance?.zoomIn({ duration: 200 })
+  }, [reactFlowInstance])
+
+  const handleZoomOut = useCallback(() => {
+    reactFlowInstance?.zoomOut({ duration: 200 })
+  }, [reactFlowInstance])
+
+  const handleFitView = useCallback(() => {
+    reactFlowInstance?.fitView({ padding: 0.2, duration: 200 })
+  }, [reactFlowInstance])
+
+  // Main keyboard handler
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Use code to work across keyboard layouts
-      if ((e.ctrlKey || e.metaKey) && e.code === 'KeyS') {
+      // Don't handle shortcuts when typing in inputs
+      const target = e.target
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return
+      }
+      
+      const isCtrlOrCmd = e.ctrlKey || e.metaKey
+      
+      // Show shortcuts modal: ?
+      if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+        e.preventDefault()
+        setShowShortcuts(prev => !prev)
+        return
+      }
+      
+      // Escape: deselect all or close modals
+      if (e.key === 'Escape') {
+        if (showShortcuts) {
+          setShowShortcuts(false)
+        } else if (contextMenu) {
+          setContextMenu(null)
+        } else {
+          handleDeselectAll()
+        }
+        return
+      }
+      
+      // Ctrl+S: Save
+      if (isCtrlOrCmd && e.code === 'KeyS') {
         e.preventDefault()
         if (isDirtyRef.current) {
           handleSave()
         }
+        return
+      }
+      
+      // Ctrl+A: Select all
+      if (isCtrlOrCmd && e.code === 'KeyA') {
+        e.preventDefault()
+        handleSelectAll()
+        return
+      }
+      
+      // Ctrl+C: Copy
+      if (isCtrlOrCmd && e.code === 'KeyC') {
+        e.preventDefault()
+        handleCopy()
+        return
+      }
+      
+      // Ctrl+V: Paste
+      if (isCtrlOrCmd && e.code === 'KeyV') {
+        e.preventDefault()
+        handlePaste()
+        return
+      }
+      
+      // Ctrl+D: Duplicate
+      if (isCtrlOrCmd && e.code === 'KeyD') {
+        e.preventDefault()
+        handleDuplicate()
+        return
+      }
+      
+      // Ctrl+Z: Undo (ReactFlow doesn't have built-in undo, just show message)
+      if (isCtrlOrCmd && e.code === 'KeyZ' && !e.shiftKey) {
+        e.preventDefault()
+        // Undo is not implemented natively, could use a library
+        return
+      }
+      
+      // Ctrl+Shift+Z or Ctrl+Y: Redo
+      if ((isCtrlOrCmd && e.shiftKey && e.code === 'KeyZ') || (isCtrlOrCmd && e.code === 'KeyY')) {
+        e.preventDefault()
+        // Redo is not implemented natively
+        return
+      }
+      
+      // Ctrl++: Zoom in
+      if (isCtrlOrCmd && (e.key === '+' || e.key === '=')) {
+        e.preventDefault()
+        handleZoomIn()
+        return
+      }
+      
+      // Ctrl+-: Zoom out
+      if (isCtrlOrCmd && e.key === '-') {
+        e.preventDefault()
+        handleZoomOut()
+        return
+      }
+      
+      // Ctrl+0: Fit view
+      if (isCtrlOrCmd && e.key === '0') {
+        e.preventDefault()
+        handleFitView()
+        return
+      }
+      
+      // Delete/Backspace: Delete selected
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault()
+        handleDeleteSelected()
+        return
       }
     }
+    
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [handleSave])
+  }, [
+    handleSave, handleSelectAll, handleDeselectAll, handleCopy, handlePaste, 
+    handleDuplicate, handleZoomIn, handleZoomOut, handleFitView, handleDeleteSelected,
+    showShortcuts, contextMenu
+  ])
 
   // Listen for badge click navigation events
   useEffect(() => {
@@ -794,7 +1057,18 @@ const DiagramEditorContent = ({
       />
 
       {/* Save Status Indicator */}
-      <div className="absolute bottom-4 right-4 z-10">
+      <div className="absolute bottom-4 right-4 z-10 flex items-center gap-2">
+        {/* Keyboard Shortcuts Button */}
+        <button
+          onClick={() => setShowShortcuts(true)}
+          className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow text-sm text-gray-500 hover:text-gray-700 hover:shadow-md transition-all"
+          title="Keyboard shortcuts (?)"
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span className="hidden sm:inline">Shortcuts</span>
+        </button>
+        
+        {/* Save Status */}
         {isSaving ? (
           <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow text-sm text-gray-600">
             <Save className="w-4 h-4 animate-pulse" />
@@ -807,6 +1081,12 @@ const DiagramEditorContent = ({
           </div>
         ) : null}
       </div>
+
+      {/* Keyboard Shortcuts Modal */}
+      <KeyboardShortcutsModal 
+        isOpen={showShortcuts} 
+        onClose={() => setShowShortcuts(false)} 
+      />
 
       {/* Incoming Links Panel */}
       {(diagramLinks?.incoming?.length ?? 0) > 0 && (
@@ -927,8 +1207,10 @@ const DiagramEditor = (props) => {
             {props.diagram?.diagram_type}
           </span>
         </div>
-        <div className="text-xs text-gray-400">
-          Ctrl+S to save
+        <div className="text-xs text-gray-400 flex items-center gap-2">
+          <span>Press</span>
+          <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600 font-medium">?</kbd>
+          <span>for shortcuts</span>
         </div>
       </div>
       <div className="flex-1 relative bg-gray-50">
