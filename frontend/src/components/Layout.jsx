@@ -48,25 +48,25 @@ const AboutModal = ({ isOpen, onClose }) => {
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="relative px-6 pt-6 pb-4 bg-gradient-to-br from-primary-500 to-primary-700 text-white">
+          <div className="relative px-6 pt-6 pb-4 bg-white border-b border-gray-100 text-gray-900">
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 p-1.5 hover:bg-white/20 rounded-lg transition-colors"
+              className="absolute top-4 right-4 p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-500"
             >
               <X className="w-5 h-5" />
             </button>
             
             <div className="flex items-center gap-3 mb-3">
-              <div className="p-2.5 bg-white/20 rounded-xl">
-                <Info className="w-6 h-6" />
+              <div className="p-2.5 bg-primary-50 rounded-xl">
+                <Info className="w-6 h-6 text-primary-600" />
               </div>
               <div>
-                <h2 className="text-xl font-bold">О проекте</h2>
-                <p className="text-primary-100 text-sm">IDMS v1.0</p>
+                <h2 className="text-xl font-bold text-gray-900">О проекте</h2>
+                <p className="text-sm text-gray-500">IDMS v1.0</p>
               </div>
             </div>
             
-            <p className="text-primary-100 text-sm leading-relaxed">
+            <p className="text-sm leading-relaxed text-gray-600">
               Интегрированная система моделирования диаграмм
             </p>
           </div>
