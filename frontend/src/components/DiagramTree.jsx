@@ -4,14 +4,18 @@ import { useMutation, useQueryClient } from 'react-query'
 import { diagramsAPI } from '../api'
 import toast from 'react-hot-toast'
 
-const DiagramTree = ({ diagrams, selectedDiagram, onSelectDiagram }) => {
+const DiagramTree = ({ diagrams, selectedDiagram, onSelectDiagram, onDiagramDeleted }) => {
   const queryClient = useQueryClient()
 
   // Delete diagram mutation
   const deleteDiagramMutation = useMutation(diagramsAPI.deleteDiagram, {
-    onSuccess: () => {
+    onSuccess: (_, deletedDiagramId) => {
       queryClient.invalidateQueries('diagrams')
       toast.success('Диаграмма удалена!')
+      // Если удалённая диаграмма была выбрана — сбросить выбор
+      if (selectedDiagram?.id === deletedDiagramId) {
+        onDiagramDeleted?.()
+      }
     },
     onError: (error) => {
       toast.error(error.response?.data?.detail || 'Не удалось удалить диаграмму')

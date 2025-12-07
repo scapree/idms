@@ -1070,7 +1070,7 @@ const DiagramEditorContent = ({
 
       {contextMenu && (
         <div 
-          className="fixed bg-white rounded border border-gray-200 py-1 z-50 text-sm min-w-[200px]" 
+          className="fixed bg-white rounded border border-gray-200 py-1 z-50 text-sm w-[200px]" 
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
           {contextMenu.type === 'node' && (
@@ -1249,7 +1249,7 @@ const DiagramEditorContent = ({
                     }}
                     className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${contextMenu.data.data?.isIdentifying !== false ? 'text-primary-600 font-medium bg-primary-50' : 'text-gray-700'}`}
                   >
-                    Идентифицирующая (—)
+                    Идентифиц. (—)
                   </button>
                   <button 
                     onClick={() => {
@@ -1262,7 +1262,7 @@ const DiagramEditorContent = ({
                     }}
                     className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${contextMenu.data.data?.isIdentifying === false ? 'text-primary-600 font-medium bg-primary-50' : 'text-gray-700'}`}
                   >
-                    Неидентифицирующая (- - -)
+                    Неидентифиц. (---)
                   </button>
                   
                   <div className="h-px bg-gray-100 my-1"></div>
@@ -1282,7 +1282,7 @@ const DiagramEditorContent = ({
                     }}
                     className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${contextMenu.data.data?.sourceOptional ? 'text-primary-600 font-medium bg-primary-50' : 'text-gray-700'}`}
                   >
-                    {contextMenu.data.data?.sourceOptional ? '✓ ' : ''}Source опционален (○)
+                    {contextMenu.data.data?.sourceOptional ? '✓ ' : ''}Source опц. (○)
                   </button>
                   <button 
                     onClick={() => {
@@ -1295,7 +1295,7 @@ const DiagramEditorContent = ({
                     }}
                     className={`w-full px-3 py-2 text-left hover:bg-gray-50 ${contextMenu.data.data?.targetOptional ? 'text-primary-600 font-medium bg-primary-50' : 'text-gray-700'}`}
                   >
-                    {contextMenu.data.data?.targetOptional ? '✓ ' : ''}Target опционален (○)
+                    {contextMenu.data.data?.targetOptional ? '✓ ' : ''}Target опц. (○)
                   </button>
                 </>
               )}

@@ -7,10 +7,11 @@ import DiagramEditor from '../components/DiagramEditor'
 import DiagramTree from '../components/DiagramTree'
 import DiagramPalette from '../components/DiagramPalette'
 import ExportModal from '../components/ExportModal'
+import ImportModal from '../components/ImportModal'
 import DiagramTemplatesModal from '../components/DiagramTemplatesModal'
 import DiagramMap from '../components/DiagramMap'
 import { useAuth } from '../hooks/useAuth'
-import { ArrowLeft, Plus, FileText, Share2, Copy, X, Download, LayoutTemplate, Map, Bookmark } from 'lucide-react'
+import { ArrowLeft, Plus, FileText, Share2, Copy, X, Download, Upload, LayoutTemplate, Map, Bookmark } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const ProjectPage = () => {
@@ -29,6 +30,7 @@ const ProjectPage = () => {
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
   const [showDiagramMap, setShowDiagramMap] = useState(false)
   const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
   const [pendingTemplate, setPendingTemplate] = useState(null)
   const [templateName, setTemplateName] = useState('')
   const [templateDescription, setTemplateDescription] = useState('')
@@ -265,6 +267,17 @@ const ProjectPage = () => {
     }
   }
 
+  // Handle import from file
+  const handleImport = (importedData) => {
+    // Create a new diagram with imported data
+    createDiagramMutation.mutate({
+      name: importedData.name,
+      diagram_type: importedData.diagram_type,
+      data: importedData.data,
+    })
+    setShowImportModal(false)
+  }
+
   const handleSelectDiagram = async (diagram) => {
     // Если уже выбрана эта диаграмма - ничего не делаем
     if (selectedDiagram?.id === diagram.id) return
@@ -430,6 +443,14 @@ const ProjectPage = () => {
             Экспорт
           </button>
           <button
+            onClick={() => setShowImportModal(true)}
+            className="btn btn-secondary btn-sm"
+            title="Импорт диаграммы из файла"
+          >
+            <Upload className="h-4 w-4 mr-1" />
+            Импорт
+          </button>
+          <button
             onClick={handleCreateInvite}
             disabled={createInviteMutation.isLoading}
             className="btn btn-secondary btn-sm"
@@ -470,6 +491,7 @@ const ProjectPage = () => {
               diagrams={diagrams}
               selectedDiagram={selectedDiagram}
               onSelectDiagram={handleSelectDiagram}
+              onDiagramDeleted={() => setSelectedDiagram(null)}
             />
           </div>
         </div>
@@ -649,8 +671,17 @@ const ProjectPage = () => {
         onClose={() => setShowExportModal(false)}
         diagramName={selectedDiagram?.name}
         projectName={project?.name}
+        diagram={selectedDiagram}
+        diagramType={selectedDiagram?.diagram_type}
         diagrams={diagrams}
         mode={selectedDiagram ? 'single' : 'project'}
+      />
+
+      {/* Import Modal */}
+      <ImportModal
+        isOpen={showImportModal}
+        onClose={() => setShowImportModal(false)}
+        onImport={handleImport}
       />
 
       {/* Templates Modal */}
