@@ -14,7 +14,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { useMutation, useQueryClient, useQuery } from 'react-query'
 import { diagramsAPI } from '../api'
-import { Save, CheckCircle2, Link2, ExternalLink, Unlink, ArrowUpRight, Edit, Trash2, Palette } from 'lucide-react'
+import { Save, CheckCircle2, Link2, ExternalLink, Unlink, ArrowUpRight, Edit, Trash2, Palette, Download, Upload, Bookmark, HelpCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ShapeNode from './nodes/ShapeNode'
 import ERDEdge from './edges/ERDEdge'
@@ -1478,21 +1478,61 @@ const DiagramEditor = (props) => {
     )
   }
 
+  const [showShortcutsFromHeader, setShowShortcutsFromHeader] = useState(false)
+
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-white border-b border-gray-200">
         <div className="flex items-center gap-3">
           <h2 className="text-base font-semibold text-gray-900">{props.diagram?.name || 'Без названия'}</h2>
           <span className="badge badge-secondary font-mono uppercase">
             {props.diagram?.diagram_type}
           </span>
         </div>
-        <div className="text-xs text-gray-400 flex items-center gap-1.5">
-          <span>Нажмите</span>
-          <kbd className="px-1.5 py-0.5 bg-gray-100 border border-gray-200 rounded text-gray-600 font-medium text-[10px]">?</kbd>
-          <span>для справки</span>
+        <div className="flex items-center gap-2">
+          {/* Diagram actions */}
+          <button
+            onClick={props.onSaveAsTemplate}
+            className="btn btn-secondary btn-sm"
+            title="Сохранить как шаблон"
+          >
+            <Bookmark className="h-4 w-4 mr-1.5" />
+            Шаблон
+          </button>
+          <button
+            onClick={props.onExport}
+            className="btn btn-secondary btn-sm"
+            title="Экспорт диаграммы"
+          >
+            <Download className="h-4 w-4 mr-1.5" />
+            Экспорт
+          </button>
+          <button
+            onClick={props.onImport}
+            className="btn btn-secondary btn-sm"
+            title="Импорт диаграммы"
+          >
+            <Upload className="h-4 w-4 mr-1.5" />
+            Импорт
+          </button>
+          <div className="w-px h-6 bg-gray-200 mx-1"></div>
+          {/* Help button */}
+          <button
+            onClick={() => setShowShortcutsFromHeader(true)}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+            title="Горячие клавиши (?)"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </button>
         </div>
       </div>
+      
+      {/* Shortcuts modal triggered from header */}
+      <KeyboardShortcutsModal 
+        isOpen={showShortcutsFromHeader} 
+        onClose={() => setShowShortcutsFromHeader(false)} 
+        diagramType={props.diagram?.diagram_type}
+      />
       <div className="flex-1 relative bg-gray-50">
         {!isReady ? (
           <div className="absolute inset-0 flex items-center justify-center bg-white z-50">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { X, Download, FileImage, FileText, Loader2, CheckCircle, FileCode, Database, Braces } from 'lucide-react'
 import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
@@ -27,6 +27,13 @@ const ExportModal = ({
   const [sqlDialect, setSqlDialect] = useState('postgresql')
   const [isExporting, setIsExporting] = useState(false)
   const [exportedFiles, setExportedFiles] = useState([])
+
+  // Reset exported files when modal opens or diagram changes
+  useEffect(() => {
+    if (isOpen) {
+      setExportedFiles([])
+    }
+  }, [isOpen, diagramName])
 
   const qualitySettings = {
     low: { scale: 1, quality: 0.6 },

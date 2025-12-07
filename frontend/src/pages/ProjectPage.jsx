@@ -11,7 +11,7 @@ import ImportModal from '../components/ImportModal'
 import DiagramTemplatesModal from '../components/DiagramTemplatesModal'
 import DiagramMap from '../components/DiagramMap'
 import { useAuth } from '../hooks/useAuth'
-import { ArrowLeft, Plus, FileText, Share2, Copy, X, Download, Upload, LayoutTemplate, Map, Bookmark } from 'lucide-react'
+import { ArrowLeft, Plus, FileText, Share2, Copy, X, LayoutTemplate, Map, Bookmark } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const ProjectPage = () => {
@@ -425,32 +425,6 @@ const ProjectPage = () => {
             Карта связей
           </button>
           <button
-            onClick={openSaveTemplateModal}
-            disabled={!selectedDiagram}
-            className="btn btn-secondary btn-sm"
-            title={selectedDiagram ? 'Сохранить как шаблон' : 'Выберите диаграмму'}
-          >
-            <Bookmark className="h-4 w-4 mr-1" />
-            Как шаблон
-          </button>
-          <button
-            onClick={() => setShowExportModal(true)}
-            disabled={!selectedDiagram}
-            className="btn btn-secondary btn-sm"
-            title={selectedDiagram ? 'Экспорт диаграммы' : 'Выберите диаграмму для экспорта'}
-          >
-            <Download className="h-4 w-4 mr-1" />
-            Экспорт
-          </button>
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="btn btn-secondary btn-sm"
-            title="Импорт диаграммы из файла"
-          >
-            <Upload className="h-4 w-4 mr-1" />
-            Импорт
-          </button>
-          <button
             onClick={handleCreateInvite}
             disabled={createInviteMutation.isLoading}
             className="btn btn-secondary btn-sm"
@@ -510,6 +484,9 @@ const ProjectPage = () => {
               onNavigateToDiagram={handleNavigateToDiagram}
               highlightElementId={highlightElementId}
               onHighlightClear={() => setHighlightElementId(null)}
+              onSaveAsTemplate={openSaveTemplateModal}
+              onExport={() => setShowExportModal(true)}
+              onImport={() => setShowImportModal(true)}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center bg-gray-50">
