@@ -13,11 +13,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Diagram, DiagramLink, Project, ProjectInvite, ProjectMembership
+from .models import Diagram, DiagramLink, DiagramTemplate, Project, ProjectInvite, ProjectMembership
 from .serializers import (
     DiagramLinkCreateSerializer,
     DiagramLinkSerializer,
     DiagramSerializer,
+    DiagramTemplateCreateSerializer,
+    DiagramTemplateSerializer,
     ProjectInviteInfoSerializer,
     ProjectInviteSerializer,
     ProjectSerializer,
@@ -516,3 +518,108 @@ class ProjectLinksView(APIView):
         )
         
         return Response(DiagramLinkSerializer(links, many=True).data, status=status.HTTP_200_OK)
+
+
+# --- Diagram Templates ---
+
+class DiagramTemplateListView(APIView):
+    """
+    GET: List all templates available to the user (own + public)
+    POST: Create a new template from diagram data
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Get user's own templates + public templates
+        from django.db.models import Q
+        templates = DiagramTemplate.objects.filter(
+            Q(user=request.user) | Q(is_public=True)
+        ).select_related('user').order_by('-created_at')
+        
+        # Optional filter by diagram type
+        diagram_type = request.query_params.get('type')
+        if diagram_type:
+            templates = templates.filter(diagram_type=diagram_type)
+        
+        serializer = DiagramTemplateSerializer(templates, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = DiagramTemplateCreateSerializer(data=request.data)
+        if serializer.is_valid():
+            template = serializer.save(user=request.user)
+            return Response(
+                DiagramTemplateSerializer(template).data,
+                status=status.HTTP_201_CREATED,
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DiagramTemplateDetailView(APIView):
+    """
+    GET: Get a specific template
+    PUT: Update a template (owner only)
+    DELETE: Delete a template (owner only)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def _get_template(self, template_id, user, require_owner=False):
+        from django.db.models import Q
+        
+        if require_owner:
+            template = get_object_or_404(DiagramTemplate, id=template_id, user=user)
+        else:
+            # Allow access to own templates or public templates
+            template = get_object_or_404(
+                DiagramTemplate.objects.filter(Q(user=user) | Q(is_public=True)),
+                id=template_id
+            )
+        return template
+
+    def get(self, request, template_id):
+        template = self._get_template(template_id, request.user)
+        return Response(DiagramTemplateSerializer(template).data, status=status.HTTP_200_OK)
+
+    def put(self, request, template_id):
+        template = self._get_template(template_id, request.user, require_owner=True)
+        serializer = DiagramTemplateCreateSerializer(template, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(DiagramTemplateSerializer(template).data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, template_id):
+        template = self._get_template(template_id, request.user, require_owner=True)
+        template.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class SaveDiagramAsTemplateView(APIView):
+    """
+    POST: Save an existing diagram as a template
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, diagram_id):
+        diagram = get_object_or_404(Diagram, id=diagram_id)
+        _ensure_project_member(diagram.project, request.user)
+        
+        # Get template name from request or use diagram name
+        name = request.data.get('name', f'{diagram.name} (шаблон)')
+        description = request.data.get('description', diagram.description or '')
+        is_public = request.data.get('is_public', False)
+        
+        # Create template from diagram data
+        template = DiagramTemplate.objects.create(
+            name=name,
+            description=description,
+            diagram_type=diagram.diagram_type,
+            data=diagram.data,
+            user=request.user,
+            is_public=is_public,
+        )
+        
+        return Response(
+            DiagramTemplateSerializer(template).data,
+            status=status.HTTP_201_CREATED,
+        )

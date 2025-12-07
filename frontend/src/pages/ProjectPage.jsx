@@ -10,7 +10,7 @@ import ExportModal from '../components/ExportModal'
 import DiagramTemplatesModal from '../components/DiagramTemplatesModal'
 import DiagramMap from '../components/DiagramMap'
 import { useAuth } from '../hooks/useAuth'
-import { ArrowLeft, Plus, FileText, Share2, Copy, X, Download, LayoutTemplate, Map } from 'lucide-react'
+import { ArrowLeft, Plus, FileText, Share2, Copy, X, Download, LayoutTemplate, Map, Bookmark } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const ProjectPage = () => {
@@ -28,7 +28,11 @@ const ProjectPage = () => {
   const [showExportModal, setShowExportModal] = useState(false)
   const [showTemplatesModal, setShowTemplatesModal] = useState(false)
   const [showDiagramMap, setShowDiagramMap] = useState(false)
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false)
   const [pendingTemplate, setPendingTemplate] = useState(null)
+  const [templateName, setTemplateName] = useState('')
+  const [templateDescription, setTemplateDescription] = useState('')
+  const [templateIsPublic, setTemplateIsPublic] = useState(false)
   const [highlightElementId, setHighlightElementId] = useState(null)
   const { user } = useAuth()
   const heldLockRef = useRef(null)
@@ -100,6 +104,23 @@ const ProjectPage = () => {
       },
       onError: (error) => {
         toast.error(error.response?.data?.detail || 'Не удалось создать ссылку')
+      },
+    }
+  )
+
+  // Save as template mutation
+  const saveAsTemplateMutation = useMutation(
+    ({ diagramId, data }) => diagramsAPI.saveDiagramAsTemplate(diagramId, data),
+    {
+      onSuccess: () => {
+        setShowSaveTemplateModal(false)
+        setTemplateName('')
+        setTemplateDescription('')
+        setTemplateIsPublic(false)
+        toast.success('Шаблон сохранён!')
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.detail || 'Не удалось сохранить шаблон')
       },
     }
   )
@@ -218,6 +239,30 @@ const ProjectPage = () => {
 
   const handleCreateInvite = () => {
     createInviteMutation.mutate()
+  }
+
+  const handleSaveAsTemplate = () => {
+    if (!templateName.trim()) {
+      toast.error('Введите название шаблона')
+      return
+    }
+    
+    saveAsTemplateMutation.mutate({
+      diagramId: selectedDiagram.id,
+      data: {
+        name: templateName,
+        description: templateDescription,
+        is_public: templateIsPublic,
+      },
+    })
+  }
+
+  const openSaveTemplateModal = () => {
+    if (selectedDiagram) {
+      setTemplateName(`${selectedDiagram.name} (шаблон)`)
+      setTemplateDescription(selectedDiagram.description || '')
+      setShowSaveTemplateModal(true)
+    }
   }
 
   const handleSelectDiagram = async (diagram) => {
@@ -365,6 +410,15 @@ const ProjectPage = () => {
           >
             <Map className="h-4 w-4 mr-1" />
             Карта связей
+          </button>
+          <button
+            onClick={openSaveTemplateModal}
+            disabled={!selectedDiagram}
+            className="btn btn-secondary btn-sm"
+            title={selectedDiagram ? 'Сохранить как шаблон' : 'Выберите диаграмму'}
+          >
+            <Bookmark className="h-4 w-4 mr-1" />
+            Как шаблон
           </button>
           <button
             onClick={() => setShowExportModal(true)}
@@ -622,6 +676,101 @@ const ProjectPage = () => {
           }
         }}
       />
+
+      {/* Save as Template Modal */}
+      {showSaveTemplateModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg border border-gray-200 w-[450px] overflow-hidden">
+            <div className="flex justify-between items-center px-5 py-4 bg-gray-50 border-b">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary-100 rounded">
+                  <Bookmark className="w-5 h-5 text-primary-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">
+                    Сохранить как шаблон
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    {selectedDiagram?.name}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowSaveTemplateModal(false)}
+                className="p-1.5 hover:bg-gray-200 rounded transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Название шаблона
+                </label>
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  className="input"
+                  placeholder="Введите название"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  Описание (необязательно)
+                </label>
+                <textarea
+                  value={templateDescription}
+                  onChange={(e) => setTemplateDescription(e.target.value)}
+                  rows={3}
+                  className="input"
+                  placeholder="Краткое описание шаблона"
+                />
+              </div>
+              
+              <label className="flex items-center gap-3 cursor-pointer group p-3 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
+                <div className="relative">
+                  <input
+                    type="checkbox"
+                    checked={templateIsPublic}
+                    onChange={(e) => setTemplateIsPublic(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div className={`w-10 h-5 rounded-full transition-colors ${
+                    templateIsPublic ? 'bg-primary-500' : 'bg-gray-300'
+                  }`}>
+                    <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-transform ${
+                      templateIsPublic ? 'translate-x-5' : 'translate-x-0.5'
+                    }`} />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-sm font-medium text-gray-700">Публичный шаблон</span>
+                  <p className="text-xs text-gray-500">Доступен всем пользователям системы</p>
+                </div>
+              </label>
+              
+              <div className="flex justify-end space-x-2 pt-2">
+                <button
+                  onClick={() => setShowSaveTemplateModal(false)}
+                  className="btn btn-secondary btn-md"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleSaveAsTemplate}
+                  disabled={saveAsTemplateMutation.isLoading}
+                  className="btn btn-primary btn-md"
+                >
+                  {saveAsTemplateMutation.isLoading ? 'Сохранение...' : 'Сохранить шаблон'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

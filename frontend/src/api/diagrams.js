@@ -77,6 +77,38 @@ export const diagramsAPI = {
     const response = await apiClient.get(`/projects/${projectId}/links`)
     return response.data
   },
+
+  // Diagram Templates
+  getTemplates: async (diagramType = null) => {
+    const params = diagramType ? `?type=${diagramType}` : ''
+    const response = await apiClient.get(`/templates/${params}`)
+    return response.data
+  },
+
+  getTemplate: async (templateId) => {
+    const response = await apiClient.get(`/templates/${templateId}`)
+    return response.data
+  },
+
+  createTemplate: async (templateData) => {
+    const response = await apiClient.post('/templates/', templateData)
+    return response.data
+  },
+
+  updateTemplate: async (templateId, templateData) => {
+    const response = await apiClient.put(`/templates/${templateId}`, templateData)
+    return response.data
+  },
+
+  deleteTemplate: async (templateId) => {
+    const response = await apiClient.delete(`/templates/${templateId}`)
+    return response.data
+  },
+
+  saveDiagramAsTemplate: async (diagramId, templateData) => {
+    const response = await apiClient.post(`/diagrams/${diagramId}/save-as-template`, templateData)
+    return response.data
+  },
 }
 
 

@@ -140,3 +140,39 @@ class DiagramLink(models.Model):
     def __str__(self):
         return f'{self.source_diagram.name}:{self.source_element_id} → {self.target_diagram.name}'
 
+
+class DiagramTemplate(models.Model):
+    """
+    User-created diagram templates.
+    Users can save their diagrams as templates for reuse.
+    """
+    DIAGRAM_TYPES = [
+        ("bpmn", "BPMN"),
+        ("dfd", "DFD"),
+        ("erd", "ERD"),
+    ]
+
+    name = models.CharField(max_length=100)
+    description = models.TextField(max_length=255, blank=True, default='')
+    diagram_type = models.CharField(max_length=10, choices=DIAGRAM_TYPES)
+    data = models.JSONField(default=dict)  # Stores nodes and edges
+    
+    # Owner of the template
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='diagram_templates'
+    )
+    
+    # Whether the template is shared with all users in the system
+    is_public = models.BooleanField(default=False)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f'{self.name} ({self.diagram_type}) by {self.user.username}'
+

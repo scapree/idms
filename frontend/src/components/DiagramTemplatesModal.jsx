@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from 'react'
-import { X, FileText, Layout, Database, Workflow, Users, ShoppingCart, FileCheck, Server, Layers } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from 'react-query'
+import { diagramsAPI } from '../api'
+import { X, FileText, Layout, Database, Workflow, Users, ShoppingCart, FileCheck, Server, Layers, User, Trash2, Globe, Lock } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 // ==========================================
 // ELEMENT CONFIGS (matching DiagramPalette.jsx)
@@ -589,16 +592,69 @@ const DIAGRAM_TYPE_LABELS = {
 const DiagramTemplatesModal = ({ isOpen, onClose, onSelectTemplate, diagramType }) => {
   const [selectedType, setSelectedType] = useState(diagramType || 'bpmn')
   const [selectedTemplate, setSelectedTemplate] = useState(null)
+  const [activeTab, setActiveTab] = useState('builtin') // 'builtin' or 'custom'
+  const queryClient = useQueryClient()
 
-  const templates = useMemo(() => ALL_TEMPLATES[selectedType] || [], [selectedType])
+  // Fetch custom templates from API
+  const { data: customTemplates = [], isLoading: loadingCustom } = useQuery(
+    ['templates', selectedType],
+    () => diagramsAPI.getTemplates(selectedType),
+    {
+      enabled: isOpen,
+      staleTime: 0,
+    }
+  )
+
+  // Delete template mutation
+  const deleteTemplateMutation = useMutation(
+    (templateId) => diagramsAPI.deleteTemplate(templateId),
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(['templates'])
+        setSelectedTemplate(null)
+        toast.success('Шаблон удалён!')
+      },
+      onError: (error) => {
+        toast.error(error.response?.data?.detail || 'Не удалось удалить шаблон')
+      },
+    }
+  )
+
+  const builtinTemplates = useMemo(() => ALL_TEMPLATES[selectedType] || [], [selectedType])
+  
+  const filteredCustomTemplates = useMemo(() => {
+    return customTemplates.filter(t => t.diagram_type === selectedType)
+  }, [customTemplates, selectedType])
+
+  const currentTemplates = activeTab === 'builtin' ? builtinTemplates : filteredCustomTemplates
 
   const handleSelect = () => {
     if (selectedTemplate) {
-      onSelectTemplate({
-        ...selectedTemplate,
-        diagramType: selectedType,
-      })
+      // For custom templates, we need to transform the data structure
+      if (activeTab === 'custom') {
+        const templateData = selectedTemplate.data || {}
+        onSelectTemplate({
+          id: selectedTemplate.id,
+          name: selectedTemplate.name,
+          description: selectedTemplate.description,
+          diagramType: selectedTemplate.diagram_type,
+          nodes: templateData.nodes || [],
+          edges: templateData.edges || [],
+        })
+      } else {
+        onSelectTemplate({
+          ...selectedTemplate,
+          diagramType: selectedType,
+        })
+      }
       onClose()
+    }
+  }
+
+  const handleDeleteTemplate = (e, templateId) => {
+    e.stopPropagation()
+    if (window.confirm('Удалить этот шаблон?')) {
+      deleteTemplateMutation.mutate(templateId)
     }
   }
 
@@ -653,31 +709,86 @@ const DiagramTemplatesModal = ({ isOpen, onClose, onSelectTemplate, diagramType 
                 }`}
               >
                 {label}
-                <span className="ml-1.5 text-xs text-gray-400">
-                  ({ALL_TEMPLATES[type]?.length || 0})
-                </span>
               </button>
             ))}
           </div>
 
+          {/* Source tabs (Builtin / Custom) */}
+          <div className="px-5 py-2 border-b flex gap-1 flex-shrink-0 bg-gray-50">
+            <button
+              onClick={() => {
+                setActiveTab('builtin')
+                setSelectedTemplate(null)
+              }}
+              className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+                activeTab === 'builtin'
+                  ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Layers className="w-4 h-4 inline-block mr-1.5" />
+              Встроенные
+              <span className="ml-1.5 text-xs text-gray-400">
+                ({builtinTemplates.length})
+              </span>
+            </button>
+            <button
+              onClick={() => {
+                setActiveTab('custom')
+                setSelectedTemplate(null)
+              }}
+              className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
+                activeTab === 'custom'
+                  ? 'bg-white text-gray-900 shadow-sm border border-gray-200'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <User className="w-4 h-4 inline-block mr-1.5" />
+              Мои шаблоны
+              <span className="ml-1.5 text-xs text-gray-400">
+                ({filteredCustomTemplates.length})
+              </span>
+            </button>
+          </div>
+
           {/* Templates grid */}
           <div className="flex-1 overflow-y-auto p-5">
-            {templates.length === 0 ? (
+            {activeTab === 'custom' && loadingCustom ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-primary-600"></div>
+              </div>
+            ) : currentTemplates.length === 0 ? (
               <div className="text-center py-12 text-gray-500">
                 <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                <p>Нет шаблонов для этого типа диаграмм</p>
+                <p>
+                  {activeTab === 'custom' 
+                    ? 'У вас пока нет сохранённых шаблонов' 
+                    : 'Нет шаблонов для этого типа диаграмм'}
+                </p>
+                {activeTab === 'custom' && (
+                  <p className="text-sm mt-2">
+                    Создайте диаграмму и сохраните её как шаблон
+                  </p>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {templates.map((template) => {
+                {currentTemplates.map((template) => {
+                  const isCustom = activeTab === 'custom'
                   const IconComponent = template.icon || FileText
                   const isSelected = selectedTemplate?.id === template.id
+                  const nodeCount = isCustom 
+                    ? (template.node_count || template.data?.nodes?.length || 0)
+                    : (template.nodes?.length || 0)
+                  const edgeCount = isCustom 
+                    ? (template.edge_count || template.data?.edges?.length || 0)
+                    : (template.edges?.length || 0)
                   
                   return (
                     <button
                       key={template.id}
                       onClick={() => setSelectedTemplate(template)}
-                      className={`text-left p-4 rounded-lg border-2 transition-all ${
+                      className={`text-left p-4 rounded-lg border-2 transition-all relative group ${
                         isSelected
                           ? 'border-primary-500 bg-primary-50'
                           : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
@@ -685,21 +796,48 @@ const DiagramTemplatesModal = ({ isOpen, onClose, onSelectTemplate, diagramType 
                     >
                       <div className="flex items-start gap-3">
                         <div className={`p-2 rounded ${isSelected ? 'bg-primary-100' : 'bg-gray-100'}`}>
-                          <IconComponent className={`w-5 h-5 ${isSelected ? 'text-primary-600' : 'text-gray-500'}`} />
+                          {isCustom ? (
+                            <FileText className={`w-5 h-5 ${isSelected ? 'text-primary-600' : 'text-gray-500'}`} />
+                          ) : (
+                            <IconComponent className={`w-5 h-5 ${isSelected ? 'text-primary-600' : 'text-gray-500'}`} />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className={`font-medium ${isSelected ? 'text-primary-900' : 'text-gray-900'}`}>
-                            {template.name}
-                          </h3>
-                          <p className="text-sm text-gray-500 mt-0.5">
-                            {template.description}
+                          <div className="flex items-center gap-2">
+                            <h3 className={`font-medium ${isSelected ? 'text-primary-900' : 'text-gray-900'}`}>
+                              {template.name}
+                            </h3>
+                            {isCustom && (
+                              template.is_public ? (
+                                <Globe className="w-3.5 h-3.5 text-emerald-500" title="Публичный" />
+                              ) : (
+                                <Lock className="w-3.5 h-3.5 text-gray-400" title="Приватный" />
+                              )
+                            )}
+                          </div>
+                          <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">
+                            {template.description || 'Без описания'}
                           </p>
                           <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
-                            <span>{template.nodes?.length || 0} элементов</span>
-                            <span>{template.edges?.length || 0} связей</span>
+                            <span>{nodeCount} элементов</span>
+                            <span>{edgeCount} связей</span>
+                            {isCustom && template.owner_username && (
+                              <span>от {template.owner_username}</span>
+                            )}
                           </div>
                         </div>
                       </div>
+                      
+                      {/* Delete button for custom templates */}
+                      {isCustom && !template.is_public && (
+                        <button
+                          onClick={(e) => handleDeleteTemplate(e, template.id)}
+                          className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Удалить шаблон"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </button>
                   )
                 })}

@@ -25,6 +25,8 @@ from diagrams.views import (
     DiagramLinkDetailView,
     DiagramLinksView,
     DiagramLockView,
+    DiagramTemplateDetailView,
+    DiagramTemplateListView,
     ElementLinksView,
     InviteInfoView,
     obtain_token,
@@ -36,6 +38,7 @@ from diagrams.views import (
     ProjectInviteListView,
     ProjectLinksView,
     register_user,
+    SaveDiagramAsTemplateView,
 )
 
 
@@ -107,4 +110,19 @@ urlpatterns = [
     path('diagrams-for-linking', ProjectDiagramsForLinkingView.as_view(), name='legacy_diagrams_for_linking'),
     path('projects/<int:project_id>/links', ProjectLinksView.as_view(), name='legacy_project_links'),
     path('projects/<int:project_id>/links/', ProjectLinksView.as_view(), name='legacy_project_links_slash'),
+
+    # Diagram Templates
+    path('api/templates/', DiagramTemplateListView.as_view(), name='templates_list'),
+    path('api/templates', DiagramTemplateListView.as_view(), name='templates_list_no_slash'),
+    path('api/templates/<int:template_id>/', DiagramTemplateDetailView.as_view(), name='template_detail'),
+    path('api/templates/<int:template_id>', DiagramTemplateDetailView.as_view(), name='template_detail_no_slash'),
+    path('api/diagrams/<int:diagram_id>/save-as-template', SaveDiagramAsTemplateView.as_view(), name='save_as_template'),
+    path('api/diagrams/<int:diagram_id>/save-as-template/', SaveDiagramAsTemplateView.as_view(), name='save_as_template_slash'),
+
+    # Legacy template aliases
+    path('templates/', DiagramTemplateListView.as_view(), name='legacy_templates_list'),
+    path('templates', DiagramTemplateListView.as_view(), name='legacy_templates_list_no_slash'),
+    path('templates/<int:template_id>/', DiagramTemplateDetailView.as_view(), name='legacy_template_detail'),
+    path('templates/<int:template_id>', DiagramTemplateDetailView.as_view(), name='legacy_template_detail_no_slash'),
+    path('diagrams/<int:diagram_id>/save-as-template', SaveDiagramAsTemplateView.as_view(), name='legacy_save_as_template'),
 ]

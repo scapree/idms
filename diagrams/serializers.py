@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 
-from .models import Project, Diagram, ProjectInvite, ProjectMembership, DiagramLink
+from .models import Project, Diagram, ProjectInvite, ProjectMembership, DiagramLink, DiagramTemplate
 
 
 User = get_user_model()
@@ -223,3 +223,62 @@ class DiagramLinkCreateSerializer(serializers.ModelSerializer):
             attrs['_validation_warnings'] = warnings
         
         return attrs
+
+
+class DiagramTemplateSerializer(serializers.ModelSerializer):
+    owner_username = serializers.CharField(source='user.username', read_only=True)
+    node_count = serializers.SerializerMethodField()
+    edge_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DiagramTemplate
+        fields = [
+            'id',
+            'name',
+            'description',
+            'diagram_type',
+            'data',
+            'user',
+            'owner_username',
+            'is_public',
+            'node_count',
+            'edge_count',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'user', 'owner_username', 'created_at', 'updated_at']
+
+    def get_node_count(self, obj):
+        data = obj.data or {}
+        nodes = data.get('nodes', [])
+        return len(nodes) if isinstance(nodes, list) else 0
+
+    def get_edge_count(self, obj):
+        data = obj.data or {}
+        edges = data.get('edges', [])
+        return len(edges) if isinstance(edges, list) else 0
+
+
+class DiagramTemplateCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DiagramTemplate
+        fields = [
+            'name',
+            'description',
+            'diagram_type',
+            'data',
+            'is_public',
+        ]
+
+    def validate_data(self, value):
+        """Ensure data contains nodes and edges structure"""
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Data must be a JSON object")
+        
+        # Ensure we have nodes and edges keys
+        if 'nodes' not in value:
+            value['nodes'] = []
+        if 'edges' not in value:
+            value['edges'] = []
+            
+        return value
