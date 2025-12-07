@@ -179,10 +179,12 @@ const ShapeNode = ({ data = {} }) => {
 
   // Helper to render type with size
   const renderTypeWithSize = (attr) => {
-    if (attr.size && ['VARCHAR', 'CHAR', 'DECIMAL'].includes(attr.type)) {
-      return `${attr.type}(${attr.size})`
+    const type = attr.type || 'VARCHAR'
+    // Show size for types that typically have it
+    if (attr.size) {
+      return `${type}(${attr.size})`
     }
-    return attr.type || 'VARCHAR'
+    return type
   }
 
   // --- RENDERERS ---
@@ -264,7 +266,7 @@ const ShapeNode = ({ data = {} }) => {
                               UQ
                             </span>
                           )}
-                          {!isNullable && !isPrimary && (
+                          {typeof attr === 'object' && attr.nullable === false && !isPrimary && (
                             <span className="text-[9px] px-1 py-0.5 rounded bg-red-100 text-red-600 font-bold">
                               NN
                             </span>

@@ -14,7 +14,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { useMutation, useQueryClient, useQuery } from 'react-query'
 import { diagramsAPI } from '../api'
-import { Save, CheckCircle2, Link2, ExternalLink, Unlink, ArrowUpRight, Edit, Trash2, Palette, Download, Upload, Bookmark, HelpCircle } from 'lucide-react'
+import { Save, CheckCircle2, Link2, ExternalLink, Unlink, ArrowUpRight, Edit, Trash2, Palette, Download, Bookmark, HelpCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ShapeNode from './nodes/ShapeNode'
 import ERDEdge from './edges/ERDEdge'
@@ -468,7 +468,7 @@ const DiagramEditorContent = ({
           sourceOptional: false,
           targetOptional: false,
           relationshipName: '',
-          showCardinality: true,
+          showCardinality: false,
         },
         style: { stroke: '#1f2937', strokeWidth: 2 },
       }
@@ -1538,14 +1538,6 @@ const DiagramEditor = (props) => {
           >
             <Download className="h-4 w-4 mr-1.5" />
             Экспорт
-          </button>
-          <button
-            onClick={props.onImport}
-            className="btn btn-secondary btn-sm"
-            title="Импорт диаграммы"
-          >
-            <Upload className="h-4 w-4 mr-1.5" />
-            Импорт
           </button>
           <div className="w-px h-6 bg-gray-200 mx-1"></div>
           {/* Help button */}

@@ -11,7 +11,7 @@ import ImportModal from '../components/ImportModal'
 import DiagramTemplatesModal from '../components/DiagramTemplatesModal'
 import DiagramMap from '../components/DiagramMap'
 import { useAuth } from '../hooks/useAuth'
-import { ArrowLeft, Plus, FileText, Share2, Copy, X, LayoutTemplate, Map, Bookmark } from 'lucide-react'
+import { ArrowLeft, Plus, FileText, Share2, Copy, X, LayoutTemplate, Map, Bookmark, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const ProjectPage = () => {
@@ -416,6 +416,14 @@ const ProjectPage = () => {
               Заблокировано {lockOwnerLabel}
             </span>
           )}
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="btn btn-secondary btn-sm"
+            title="Импорт диаграммы"
+          >
+            <Upload className="h-4 w-4 mr-1" />
+            Импорт
+          </button>
           <button
             onClick={() => setShowDiagramMap(true)}
             className="btn btn-secondary btn-sm"

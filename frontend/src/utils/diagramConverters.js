@@ -415,11 +415,6 @@ export function diagramToSQL(diagram, options = {}) {
         } else {
           colDef = `  ${colName} INTEGER PRIMARY KEY AUTOINCREMENT`
         }
-      } else {
-        // Check if this is a foreign key
-        if (colName.endsWith('_id')) {
-          colDef += ' NOT NULL'
-        }
       }
       
       columns.push(colDef)
@@ -442,7 +437,7 @@ export function diagramToSQL(diagram, options = {}) {
       const fkColumn = `${rel.sourceTable.toLowerCase()}_id`
       // Check if FK column exists, if not add it
       if (!columns.some(c => c.includes(fkColumn))) {
-        columns.push(`  ${fkColumn} INTEGER NOT NULL`)
+        columns.push(`  ${fkColumn} INTEGER`)
       }
       constraints.push(`  FOREIGN KEY (${fkColumn}) REFERENCES ${rel.sourceTable}(id)`)
     })
@@ -471,31 +466,121 @@ export function sqlToDiagram(sqlString) {
   const nodes = []
   const edges = []
   
-  // Simple regex-based parser for CREATE TABLE statements
-  const tableRegex = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"']?(\w+)[`"']?\s*\(([\s\S]*?)\);/gi
-  let match
+  // Helper to parse SQL type to our format
+  const parseSqlType = (typeStr) => {
+    if (!typeStr) return { type: 'VARCHAR', size: '255' }
+    
+    const upper = typeStr.toUpperCase().trim()
+    
+    // Handle types with size
+    const sizeMatch = upper.match(/^(\w+)\s*\(([^)]+)\)/)
+    if (sizeMatch) {
+      return { type: sizeMatch[1], size: sizeMatch[2] }
+    }
+    
+    // Map common types
+    if (upper.includes('SERIAL')) return { type: 'INT', size: '' }
+    if (upper.includes('AUTO_INCREMENT')) return { type: 'INT', size: '' }
+    if (upper === 'INTEGER' || upper === 'INT') return { type: 'INT', size: '' }
+    if (upper === 'BIGINT') return { type: 'BIGINT', size: '' }
+    if (upper === 'SMALLINT') return { type: 'SMALLINT', size: '' }
+    if (upper === 'TEXT') return { type: 'TEXT', size: '' }
+    if (upper === 'BOOLEAN' || upper === 'BOOL') return { type: 'BOOLEAN', size: '' }
+    if (upper === 'DATE') return { type: 'DATE', size: '' }
+    if (upper === 'TIMESTAMP') return { type: 'TIMESTAMP', size: '' }
+    if (upper === 'DATETIME') return { type: 'DATETIME', size: '' }
+    if (upper === 'TIME') return { type: 'TIME', size: '' }
+    if (upper === 'FLOAT') return { type: 'FLOAT', size: '' }
+    if (upper === 'DOUBLE' || upper === 'DOUBLE PRECISION') return { type: 'DOUBLE', size: '' }
+    if (upper === 'DECIMAL' || upper === 'NUMERIC') return { type: 'DECIMAL', size: '10,2' }
+    if (upper === 'UUID') return { type: 'UUID', size: '' }
+    if (upper === 'JSON' || upper === 'JSONB') return { type: 'JSON', size: '' }
+    if (upper === 'BLOB' || upper === 'BYTEA') return { type: 'BLOB', size: '' }
+    
+    return { type: upper || 'VARCHAR', size: '' }
+  }
+  
+  // Extract CREATE TABLE blocks with proper parentheses matching
+  const extractCreateTables = (sql) => {
+    const tables = []
+    const createTablePattern = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"']?(\w+)[`"']?\s*\(/gi
+    let match
+    
+    while ((match = createTablePattern.exec(sql)) !== null) {
+      const tableName = match[1]
+      const startIdx = match.index + match[0].length
+      
+      // Find matching closing parenthesis
+      let depth = 1
+      let endIdx = startIdx
+      while (depth > 0 && endIdx < sql.length) {
+        if (sql[endIdx] === '(') depth++
+        else if (sql[endIdx] === ')') depth--
+        endIdx++
+      }
+      
+      const columnsStr = sql.substring(startIdx, endIdx - 1)
+      tables.push({ tableName, columnsStr })
+    }
+    
+    return tables
+  }
+  
+  const createTables = extractCreateTables(sqlString)
   let index = 0
   
-  while ((match = tableRegex.exec(sqlString)) !== null) {
-    const tableName = match[1]
-    const columnsStr = match[2]
-    
+  for (const { tableName, columnsStr } of createTables) {
     const attributes = []
     const foreignKeys = []
+    const inlineReferences = [] // For inline REFERENCES in column definitions
     
-    // Parse columns
-    const lines = columnsStr.split(',').map(l => l.trim()).filter(l => l)
+    // Split by comma but not inside parentheses
+    const lines = []
+    let current = ''
+    let depth = 0
+    for (const char of columnsStr) {
+      if (char === '(') depth++
+      else if (char === ')') depth--
+      else if (char === ',' && depth === 0) {
+        if (current.trim()) lines.push(current.trim())
+        current = ''
+        continue
+      }
+      current += char
+    }
+    if (current.trim()) lines.push(current.trim())
     
-    lines.forEach(line => {
-      // Skip constraints
-      if (line.toUpperCase().startsWith('CONSTRAINT')) return
-      if (line.toUpperCase().startsWith('PRIMARY KEY')) return
-      if (line.toUpperCase().startsWith('UNIQUE')) return
-      if (line.toUpperCase().startsWith('INDEX')) return
-      if (line.toUpperCase().startsWith('KEY')) return
+    lines.forEach(rawLine => {
+      // Normalize whitespace: replace newlines and multiple spaces with single space
+      const line = rawLine.replace(/\s+/g, ' ').trim()
+      const upperLine = line.toUpperCase()
       
-      // Parse foreign key
-      const fkMatch = line.match(/FOREIGN\s+KEY\s*\(([^)]+)\)\s*REFERENCES\s+[`"']?(\w+)[`"']?\s*\(([^)]+)\)/i)
+      // Skip pure constraints that aren't FK
+      if (upperLine.startsWith('CONSTRAINT') && !upperLine.includes('FOREIGN KEY')) return
+      if (upperLine.startsWith('PRIMARY KEY(') || upperLine.startsWith('PRIMARY KEY (')) return
+      if (upperLine.startsWith('UNIQUE(') || upperLine.startsWith('UNIQUE (')) return
+      if (upperLine.startsWith('INDEX') || upperLine.startsWith('KEY ')) return
+      if (upperLine.startsWith('CHECK')) return
+      
+      // Parse standalone foreign key constraint - try multiple patterns
+      // Pattern 1: Standard FK
+      let fkMatch = line.match(/FOREIGN\s+KEY\s*\(\s*([^)]+)\s*\)\s*REFERENCES\s+[`"']?(\w+)[`"']?\s*\(\s*([^)]+)\s*\)/i)
+      
+      // Pattern 2: FK with CONSTRAINT prefix
+      if (!fkMatch) {
+        fkMatch = line.match(/CONSTRAINT\s+\w+\s+FOREIGN\s+KEY\s*\(\s*([^)]+)\s*\)\s*REFERENCES\s+[`"']?(\w+)[`"']?\s*\(\s*([^)]+)\s*\)/i)
+      }
+      
+      // Pattern 3: Simplified - just look for REFERENCES
+      if (!fkMatch && upperLine.includes('FOREIGN KEY') && upperLine.includes('REFERENCES')) {
+        // More flexible parsing
+        const fkColMatch = line.match(/FOREIGN\s+KEY\s*\(\s*([^)]+)\s*\)/i)
+        const refMatch = line.match(/REFERENCES\s+[`"']?(\w+)[`"']?\s*\(\s*([^)]+)\s*\)/i)
+        if (fkColMatch && refMatch) {
+          fkMatch = [null, fkColMatch[1], refMatch[1], refMatch[2]]
+        }
+      }
+      
       if (fkMatch) {
         foreignKeys.push({
           column: fkMatch[1].replace(/[`"']/g, '').trim(),
@@ -505,20 +590,63 @@ export function sqlToDiagram(sqlString) {
         return
       }
       
-      // Parse column definition
-      const colMatch = line.match(/^[`"']?(\w+)[`"']?\s+(\w+)/i)
+      // Parse column definition with full type
+      // Try multiple patterns to handle different SQL dialects
+      
+      // Pattern 1: column_name TYPE(size) or column_name TYPE
+      let colMatch = line.match(/^[`"']?(\w+)[`"']?\s+(\w+(?:\s*\([^)]+\))?)/i)
+      
+      // Pattern 2: Fallback for columns with just name and type
+      if (!colMatch) {
+        colMatch = line.match(/^(\w+)\s+([A-Z]+)/i)
+      }
+      
       if (colMatch) {
         const colName = colMatch[1]
-        const isPrimary = line.toUpperCase().includes('PRIMARY KEY') || 
-                         line.toUpperCase().includes('SERIAL') ||
-                         line.toUpperCase().includes('AUTO_INCREMENT')
+        let rawType = colMatch[2]
+        
+        // Handle SERIAL as INT
+        if (upperLine.includes('SERIAL')) {
+          rawType = 'INT'
+        }
+        // Handle AUTO_INCREMENT - extract actual type
+        if (upperLine.includes('AUTO_INCREMENT')) {
+          const autoMatch = line.match(/(\w+)\s+AUTO_INCREMENT/i)
+          if (autoMatch) rawType = autoMatch[1]
+        }
+        
+        const { type, size } = parseSqlType(rawType)
+        
+        const isPrimary = upperLine.includes('PRIMARY KEY') || 
+                         upperLine.includes('SERIAL') ||
+                         upperLine.includes('AUTO_INCREMENT')
+        
+        const isNotNull = upperLine.includes('NOT NULL')
+        const isUnique = upperLine.includes('UNIQUE') && !isPrimary
+        
+        // Check for inline REFERENCES
+        const inlineRefMatch = line.match(/REFERENCES\s+[`"']?(\w+)[`"']?\s*\(\s*([^)]+)\s*\)/i)
+        if (inlineRefMatch) {
+          inlineReferences.push({
+            column: colName,
+            refTable: inlineRefMatch[1],
+            refColumn: inlineRefMatch[2].replace(/[`"']/g, '').trim(),
+          })
+        }
         
         attributes.push({
           name: colName,
+          type: type,
+          size: size,
           primary: isPrimary,
+          nullable: isPrimary ? false : !isNotNull, // PK is always NOT NULL, others depend on NOT NULL constraint
+          unique: isUnique,
         })
       }
     })
+    
+    // Merge inline references into foreignKeys
+    foreignKeys.push(...inlineReferences)
     
     // Create node
     const nodeId = `entity-${tableName}-${index}`
@@ -529,7 +657,7 @@ export function sqlToDiagram(sqlString) {
       data: {
         label: tableName,
         shape: 'entity',
-        width: 200,
+        width: 220,
         height: 160,
         background: '#ffffff',
         borderColor: '#2563eb',
@@ -545,26 +673,117 @@ export function sqlToDiagram(sqlString) {
     index++
   }
   
-  // Create edges from foreign keys
+  // Helper to determine best handles based on relative positions
+  const getBestHandles = (sourceNode, targetNode, existingEdges) => {
+    const sx = sourceNode.position.x + (sourceNode.data?.width || 200) / 2
+    const sy = sourceNode.position.y + (sourceNode.data?.height || 160) / 2
+    const tx = targetNode.position.x + (targetNode.data?.width || 200) / 2
+    const ty = targetNode.position.y + (targetNode.data?.height || 160) / 2
+    
+    const dx = tx - sx
+    const dy = ty - sy
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI)
+    
+    // Count existing edges using each handle pair to avoid overlaps
+    const handleCounts = {}
+    existingEdges.forEach(e => {
+      const key = `${e.sourceHandle}-${e.targetHandle}`
+      handleCounts[key] = (handleCounts[key] || 0) + 1
+    })
+    
+    // Determine primary direction
+    let sourceHandle, targetHandle
+    
+    if (Math.abs(dx) > Math.abs(dy)) {
+      // Horizontal relationship
+      if (dx > 0) {
+        sourceHandle = 'source-right'
+        targetHandle = 'target-left'
+      } else {
+        sourceHandle = 'source-left'
+        targetHandle = 'target-right'
+      }
+    } else {
+      // Vertical relationship
+      if (dy > 0) {
+        sourceHandle = 'source-bottom'
+        targetHandle = 'target-top'
+      } else {
+        sourceHandle = 'source-top'
+        targetHandle = 'target-bottom'
+      }
+    }
+    
+    // Check if this pair is already used, try alternatives
+    const primaryKey = `${sourceHandle}-${targetHandle}`
+    if (handleCounts[primaryKey] > 0) {
+      // Try alternative handles
+      const alternatives = [
+        ['source-right', 'target-left'],
+        ['source-bottom', 'target-top'],
+        ['source-left', 'target-right'],
+        ['source-top', 'target-bottom'],
+        ['source-right', 'target-top'],
+        ['source-bottom', 'target-left'],
+        ['source-left', 'target-bottom'],
+        ['source-top', 'target-right'],
+      ]
+      
+      for (const [sh, th] of alternatives) {
+        const key = `${sh}-${th}`
+        if (!handleCounts[key] || handleCounts[key] === 0) {
+          sourceHandle = sh
+          targetHandle = th
+          break
+        }
+      }
+    }
+    
+    return { sourceHandle, targetHandle }
+  }
+
+  // Mark FK attributes and create edges
   nodes.forEach(node => {
     const fks = node._foreignKeys || []
     fks.forEach((fk, fkIndex) => {
-      const targetNode = nodes.find(n => n._tableName?.toLowerCase() === fk.refTable.toLowerCase())
-      if (targetNode) {
-        edges.push({
-          id: `edge-${node.id}-${targetNode.id}-${fkIndex}`,
-          source: targetNode.id,
-          target: node.id,
-          sourceHandle: 'source-right',
-          targetHandle: 'target-left',
-          type: 'erd',
-          data: { 
-            sourceCardinality: 'one',
-            targetCardinality: 'many',
-            isIdentifying: true,
-          },
-          style: { stroke: '#111827', strokeWidth: 2 },
-        })
+      // Try to find target node by _tableName first, then by label
+      let targetNode = nodes.find(n => n._tableName?.toLowerCase() === fk.refTable.toLowerCase())
+      if (!targetNode) {
+        targetNode = nodes.find(n => n.data?.label?.toLowerCase() === fk.refTable.toLowerCase())
+      }
+      
+      if (targetNode && targetNode.id !== node.id) {
+        // Mark the attribute as FK
+        const attr = node.data.attributes.find(a => a.name.toLowerCase() === fk.column.toLowerCase())
+        if (attr) {
+          attr.foreignKey = {
+            entityId: targetNode.id,
+            entityName: targetNode.data.label,
+            attributeName: fk.refColumn,
+          }
+        }
+        
+        // Create edge (avoid duplicates)
+        if (!edges.some(e => e.source === targetNode.id && e.target === node.id)) {
+          // Get best handles based on positions and existing edges
+          const { sourceHandle, targetHandle } = getBestHandles(targetNode, node, edges)
+          
+          edges.push({
+            id: `edge-${node.id}-${targetNode.id}-${fkIndex}`,
+            source: targetNode.id,
+            target: node.id,
+            sourceHandle,
+            targetHandle,
+            type: 'erd',
+            data: { 
+              sourceCardinality: 'one',
+              targetCardinality: 'many',
+              isIdentifying: true,
+              showCardinality: false,
+            },
+            style: { stroke: '#111827', strokeWidth: 2 },
+          })
+        }
       }
     })
     // Clean up temp properties

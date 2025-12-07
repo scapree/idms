@@ -180,13 +180,20 @@ const createErdEntity = (id, label, position, attributes = []) => ({
   data: {
     label: label || 'Сущность',
     shape: 'entity',
-    width: 200,
+    width: 220,
     height: 160,
     background: '#ffffff',
     borderColor: '#2563eb',
     borderWidth: 2,
     textColor: '#0f172a',
-    attributes: attributes,
+    attributes: attributes.map(attr => ({
+      name: attr.name,
+      type: attr.type || 'VARCHAR',
+      size: attr.size || (attr.type === 'VARCHAR' || !attr.type ? '255' : ''),
+      primary: attr.primary || false,
+      nullable: attr.nullable !== undefined ? attr.nullable : !attr.primary, // Default: PK = not nullable, others = nullable
+      unique: attr.unique || false,
+    })),
     handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
   },
 })
@@ -273,16 +280,24 @@ const createVerticalFlow = (id, source, target, label, direction = 'down') => ({
 })
 
 // Create ERD relationship edge
-const createErdRelation = (id, source, target, cardinality = '1:N', sourceHandle = 'source-right', targetHandle = 'target-left') => ({
-  id,
-  source,
-  target,
-  sourceHandle,
-  targetHandle,
-  type: 'erd',
-  data: { cardinality },
-  style: { stroke: '#111827', strokeWidth: 2 },
-})
+const createErdRelation = (id, source, target, cardinality = '1:N', sourceHandle = 'source-right', targetHandle = 'target-left') => {
+  const [sourceCard, targetCard] = cardinality.split(':')
+  return {
+    id,
+    source,
+    target,
+    sourceHandle,
+    targetHandle,
+    type: 'erd',
+    data: { 
+      sourceCardinality: sourceCard === '1' ? 'one' : 'many',
+      targetCardinality: targetCard === '1' || targetCard === 'N' ? (targetCard === '1' ? 'one' : 'many') : 'many',
+      isIdentifying: true,
+      showCardinality: false, // Don't show 1:N label
+    },
+    style: { stroke: '#111827', strokeWidth: 2 },
+  }
+}
 
 // Create DFD data flow edge
 const createDfdDataFlow = (id, source, target, label, sourceHandle = 'source-right', targetHandle = 'target-left') => ({
@@ -383,17 +398,17 @@ const ERD_TEMPLATES = [
     icon: Users,
     nodes: [
       createErdEntity('user-entity', 'User', { x: 100, y: 150 }, [
-        { name: 'id', primary: true },
-        { name: 'username', primary: false },
-        { name: 'email', primary: false },
-        { name: 'created_at', primary: false },
+        { name: 'id', type: 'INT', primary: true },
+        { name: 'username', type: 'VARCHAR', size: '100' },
+        { name: 'email', type: 'VARCHAR', size: '255' },
+        { name: 'created_at', type: 'TIMESTAMP' },
       ]),
       createErdEntity('post-entity', 'Post', { x: 450, y: 150 }, [
-        { name: 'id', primary: true },
-        { name: 'user_id', primary: false },
-        { name: 'title', primary: false },
-        { name: 'content', primary: false },
-        { name: 'created_at', primary: false },
+        { name: 'id', type: 'INT', primary: true },
+        { name: 'user_id', type: 'INT' },
+        { name: 'title', type: 'VARCHAR', size: '255' },
+        { name: 'content', type: 'TEXT' },
+        { name: 'created_at', type: 'TIMESTAMP' },
       ]),
     ],
     edges: [
@@ -407,31 +422,31 @@ const ERD_TEMPLATES = [
     icon: ShoppingCart,
     nodes: [
       createErdEntity('customer', 'Customer', { x: 50, y: 50 }, [
-        { name: 'id', primary: true },
-        { name: 'name', primary: false },
-        { name: 'email', primary: false },
-        { name: 'phone', primary: false },
+        { name: 'id', type: 'INT', primary: true },
+        { name: 'name', type: 'VARCHAR', size: '255' },
+        { name: 'email', type: 'VARCHAR', size: '255' },
+        { name: 'phone', type: 'VARCHAR', size: '50' },
       ]),
       createErdEntity('order', 'Order', { x: 400, y: 50 }, [
-        { name: 'id', primary: true },
-        { name: 'customer_id', primary: false },
-        { name: 'total', primary: false },
-        { name: 'status', primary: false },
-        { name: 'created_at', primary: false },
+        { name: 'id', type: 'INT', primary: true },
+        { name: 'customer_id', type: 'INT' },
+        { name: 'total', type: 'DECIMAL', size: '10,2' },
+        { name: 'status', type: 'VARCHAR', size: '50' },
+        { name: 'created_at', type: 'TIMESTAMP' },
       ]),
       createErdEntity('order-item', 'OrderItem', { x: 400, y: 320 }, [
-        { name: 'id', primary: true },
-        { name: 'order_id', primary: false },
-        { name: 'product_id', primary: false },
-        { name: 'quantity', primary: false },
-        { name: 'price', primary: false },
+        { name: 'id', type: 'INT', primary: true },
+        { name: 'order_id', type: 'INT' },
+        { name: 'product_id', type: 'INT' },
+        { name: 'quantity', type: 'INT' },
+        { name: 'price', type: 'DECIMAL', size: '10,2' },
       ]),
       createErdEntity('product', 'Product', { x: 700, y: 320 }, [
-        { name: 'id', primary: true },
-        { name: 'name', primary: false },
-        { name: 'description', primary: false },
-        { name: 'price', primary: false },
-        { name: 'stock', primary: false },
+        { name: 'id', type: 'INT', primary: true },
+        { name: 'name', type: 'VARCHAR', size: '255' },
+        { name: 'description', type: 'TEXT' },
+        { name: 'price', type: 'DECIMAL', size: '10,2' },
+        { name: 'stock', type: 'INT' },
       ]),
     ],
     edges: [
@@ -450,29 +465,29 @@ const ERD_TEMPLATES = [
     icon: FileText,
     nodes: [
       createErdEntity('author', 'Author', { x: 50, y: 150 }, [
-        { name: 'id', primary: true },
-        { name: 'name', primary: false },
-        { name: 'bio', primary: false },
+        { name: 'id', type: 'INT', primary: true },
+        { name: 'name', type: 'VARCHAR', size: '255' },
+        { name: 'bio', type: 'TEXT' },
       ]),
       createErdEntity('article', 'Article', { x: 350, y: 50 }, [
-        { name: 'id', primary: true },
-        { name: 'author_id', primary: false },
-        { name: 'category_id', primary: false },
-        { name: 'title', primary: false },
-        { name: 'content', primary: false },
-        { name: 'published_at', primary: false },
+        { name: 'id', type: 'INT', primary: true },
+        { name: 'author_id', type: 'INT' },
+        { name: 'category_id', type: 'INT' },
+        { name: 'title', type: 'VARCHAR', size: '255' },
+        { name: 'content', type: 'TEXT' },
+        { name: 'published_at', type: 'TIMESTAMP' },
       ]),
       createErdEntity('category', 'Category', { x: 650, y: 150 }, [
-        { name: 'id', primary: true },
-        { name: 'name', primary: false },
-        { name: 'slug', primary: false },
+        { name: 'id', type: 'INT', primary: true },
+        { name: 'name', type: 'VARCHAR', size: '100' },
+        { name: 'slug', type: 'VARCHAR', size: '100' },
       ]),
       createErdEntity('comment', 'Comment', { x: 350, y: 350 }, [
-        { name: 'id', primary: true },
-        { name: 'article_id', primary: false },
-        { name: 'author_name', primary: false },
-        { name: 'text', primary: false },
-        { name: 'created_at', primary: false },
+        { name: 'id', type: 'INT', primary: true },
+        { name: 'article_id', type: 'INT' },
+        { name: 'author_name', type: 'VARCHAR', size: '100' },
+        { name: 'text', type: 'TEXT' },
+        { name: 'created_at', type: 'TIMESTAMP' },
       ]),
     ],
     edges: [
