@@ -170,19 +170,23 @@ class DiagramDetailApiView(APIView):
     def put(self, request, diagram_id):
         diagram = self._get_diagram(diagram_id, request.user)
         
-        # Manually extract data to ensure JSON structure is preserved
-        update_data = request.data.copy()
-        if 'data' in request.data:
-            # Ensure 'data' is treated as a raw dictionary/json object
-            diagram_data = request.data['data']
+        # Safe data handling
+        data_to_update = request.data
+        if hasattr(request.data, 'copy'):
+            data_to_update = request.data.copy()
+
+        if 'data' in data_to_update:
+            diagram_data = data_to_update['data']
+            # If it comes as a string, parse it. If it's a dict, leave it.
             if isinstance(diagram_data, str):
                 try:
                     diagram_data = json.loads(diagram_data)
                 except json.JSONDecodeError:
+                    # If invalid json, maybe it's just a string, let serializer validation handle it
                     pass
-            update_data['data'] = diagram_data
+            data_to_update['data'] = diagram_data
 
-        serializer = DiagramSerializer(diagram, data=update_data, partial=True)
+        serializer = DiagramSerializer(diagram, data=data_to_update, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_200_OK)

@@ -50,10 +50,12 @@ urlpatterns = [
     # Projects
     path('api/projects/', ProjectApiView.as_view(), name='projects'),
     path('api/projects/<int:project_id>/', ProjectDetailApiView.as_view(), name='project_detail'),
+    path('api/projects/<int:project_id>', ProjectDetailApiView.as_view(), name='project_detail_no_slash'),
 
     # Legacy project aliases
     path('projects/', ProjectApiView.as_view(), name='legacy_projects'),
     path('projects/<int:project_id>/', ProjectDetailApiView.as_view(), name='legacy_project_detail'),
+    path('projects/<int:project_id>', ProjectDetailApiView.as_view(), name='legacy_project_detail_no_slash'),
 
     # Diagrams
     path('api/projects/<int:project_id>/diagrams/', DiagramApiView.as_view(), name='diagrams'),

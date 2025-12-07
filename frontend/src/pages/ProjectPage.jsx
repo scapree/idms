@@ -24,6 +24,7 @@ const ProjectPage = () => {
   const [inviteLink, setInviteLink] = useState('')
   const { user } = useAuth()
   const heldLockRef = useRef(null)
+  const diagramForceSaveRef = useRef(null)
 
   // Fetch project data
   const { data: project, isLoading: projectLoading } = useQuery(
@@ -36,6 +37,19 @@ const ProjectPage = () => {
     ['diagrams', projectId],
     () => diagramsAPI.getDiagrams(projectId)
   )
+
+  // Keep selectedDiagram in sync with latest list only if list has newer data
+  // (e.g. after diagram was updated from another source)
+  useEffect(() => {
+    if (!selectedDiagram) return
+    const fromList = diagrams.find((d) => d.id === selectedDiagram.id)
+    // Only update if list has newer updated_at timestamp
+    if (fromList && fromList.updated_at && selectedDiagram.updated_at) {
+      if (new Date(fromList.updated_at) > new Date(selectedDiagram.updated_at)) {
+        setSelectedDiagram(fromList)
+      }
+    }
+  }, [diagrams, selectedDiagram])
 
   // Create diagram mutation
   const createDiagramMutation = useMutation(
@@ -179,6 +193,36 @@ const ProjectPage = () => {
     createInviteMutation.mutate()
   }
 
+  const handleSelectDiagram = async (diagram) => {
+    // Если уже выбрана эта диаграмма - ничего не делаем
+    if (selectedDiagram?.id === diagram.id) return
+
+    // Перед переключением — попытка досохранить текущую диаграмму
+    if (diagramForceSaveRef.current) {
+      try {
+        await diagramForceSaveRef.current()
+      } catch (e) {
+        console.error('Failed to force-save before switching diagram', e)
+      }
+    }
+    
+    // Загружаем свежие данные диаграммы с сервера
+    try {
+      const freshDiagram = await diagramsAPI.getDiagram(diagram.id)
+      setSelectedDiagram(freshDiagram)
+      
+      // Обновляем кэш списка диаграмм свежими данными
+      queryClient.setQueryData(['diagrams', projectId], (prev) => {
+        if (!Array.isArray(prev)) return prev
+        return prev.map((d) => (d.id === freshDiagram.id ? freshDiagram : d))
+      })
+    } catch (e) {
+      console.error('Failed to fetch diagram:', e)
+      // Fallback - используем то что есть
+      setSelectedDiagram(diagram)
+    }
+  }
+
   const handleCopyInviteLink = () => {
     navigator.clipboard.writeText(inviteLink)
     toast.success('Invite link copied to clipboard!')
@@ -267,7 +311,7 @@ const ProjectPage = () => {
             <DiagramTree
               diagrams={diagrams}
               selectedDiagram={selectedDiagram}
-              onSelectDiagram={setSelectedDiagram}
+              onSelectDiagram={handleSelectDiagram}
             />
           </div>
         </div>
@@ -276,11 +320,13 @@ const ProjectPage = () => {
         <div className="flex-1 flex flex-col overflow-hidden">
           {selectedDiagram ? (
             <DiagramEditor
+              key={`${selectedDiagram.id}-${selectedDiagram.updated_at || ''}`}
               diagram={selectedDiagram}
               diagramType={selectedDiagram.diagram_type}
               isLocked={isDiagramLockedForEditing}
               lockUser={lockOwnerLabel}
               connectionType={connectionType}
+              setForceSaveRef={(fn) => { diagramForceSaveRef.current = fn }}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center bg-gray-50">
