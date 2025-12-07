@@ -14,7 +14,7 @@ import ReactFlow, {
 import 'reactflow/dist/style.css'
 import { useMutation } from 'react-query'
 import { diagramsAPI } from '../api'
-import { Lock, Save, Download } from 'lucide-react'
+import { Lock, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ShapeNode from './nodes/ShapeNode'
 import ERDEdge from './edges/ERDEdge'
@@ -22,25 +22,19 @@ import AttributeModal from './AttributeModal'
 
 // --- CONSTANTS ---
 const CONTAINER_SHAPES = new Set(['lane', 'pool'])
-
 const createUniqueId = (prefix = 'id') => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-
 const isContainerShape = (shape) => CONTAINER_SHAPES.has(shape)
-const isContainerNode = (node) => isContainerShape(node?.data?.shape)
-
 const isErdEntity = (node) => node?.data?.shape === 'entity'
 
-// Настройки кардинальности для связей
+// --- ERD SETTINGS ---
 const ERD_PRESETS = {
   '1:1': { sourceCardinality: 'one', targetCardinality: 'one' },
   '1:N': { sourceCardinality: 'one', targetCardinality: 'many' },
   'N:1': { sourceCardinality: 'many', targetCardinality: 'one' },
   'M:N': { sourceCardinality: 'many', targetCardinality: 'many' },
 }
-
 const DEFAULT_ERD_CONNECTION = ERD_PRESETS['1:N']
 
-// Маппинг типов соединения из пропсов в настройки
 const getConnectionData = (type) => {
   const map = {
     'erd-one-to-one': ERD_PRESETS['1:1'],
@@ -50,73 +44,51 @@ const getConnectionData = (type) => {
   return map[type] || DEFAULT_ERD_CONNECTION
 }
 
-const getNodeSizeFromData = (data = {}) => ({
-  width: data.width ?? 160,
-  height: data.height ?? 80,
-})
-
-const getNodeBounds = (node) => {
-  const position = node?.positionAbsolute ?? node?.position ?? { x: 0, y: 0 }
-  const width = node?.width ?? node?.data?.width ?? 0
-  const height = node?.height ?? node?.data?.height ?? 0
-  return { x: position.x, y: position.y, width, height }
-}
-
-const pointInsideBounds = (point, bounds, padding = 0) =>
-  point.x >= bounds.x + padding &&
-  point.x <= bounds.x + bounds.width - padding &&
-  point.y >= bounds.y + padding &&
-  point.y <= bounds.y + bounds.height - padding
-
-const canContainerAcceptShape = (containerShape, childShape) => {
-  if (!containerShape) return false
-  if (containerShape === 'pool') return childShape !== 'pool'
-  if (containerShape === 'lane') return childShape !== 'pool' && childShape !== 'lane'
-  return false
-}
-
-// --- MAIN CONTENT COMPONENT ---
-
 const DiagramEditorContent = ({ 
-  diagram, 
-  diagramType, 
-  isLocked, 
-  lockUser, 
-  connectionType, 
-  nodes, 
-  setNodes, 
-  onNodesChange, 
-  edges, 
-  setEdges, 
-  onEdgesChange 
+  diagram, diagramType, isLocked, lockUser, connectionType, 
+  nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange 
 }) => {
   const reactFlowInstance = useReactFlow()
   const [isSaving, setIsSaving] = useState(false)
   const [contextMenu, setContextMenu] = useState(null)
   const [attributeModal, setAttributeModal] = useState({ isOpen: false, node: null })
 
-  // Регистрируем типы узлов и ребер
   const nodeTypes = useMemo(() => ({ shape: ShapeNode }), [])
   const edgeTypes = useMemo(() => ({ erd: ERDEdge }), [])
 
-  // Конфигурация стилей для обычных диаграмм (BPMN)
+  // --- EDGE CONFIGURATION ---
   const getEdgeConfig = useCallback((flowType) => {
+    // ERD
     if (diagramType === 'erd') {
       return { type: 'erd', style: { stroke: '#111827', strokeWidth: 2 } }
     }
-    const configs = {
-      'default-flow': { style: { stroke: '#1f2937', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#1f2937' } },
-      'sequence-flow': { style: { stroke: '#111827', strokeWidth: 2 }, markerEnd: { type: MarkerType.ArrowClosed, color: '#111827' } },
-      // ...остальные типы можно добавить по необходимости
+    
+    // DFD Style
+    if (diagramType === 'dfd') {
+        return {
+            type: 'default',
+            style: { stroke: '#8b5cf6', strokeWidth: 2 },
+            markerEnd: { type: MarkerType.ArrowClosed, color: '#8b5cf6' },
+            label: 'Data Flow',
+            labelBgPadding: [8, 4],
+            labelBgBorderRadius: 4,
+            labelStyle: { fill: '#8b5cf6', fontWeight: 600 },
+            labelBgStyle: { fill: '#ffffff', fillOpacity: 0.9 },
+        }
     }
-    return configs[flowType] || configs['sequence-flow']
+
+    // BPMN Default
+    return { 
+        type: 'smoothstep',
+        style: { stroke: '#1f2937', strokeWidth: 2 }, 
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#1f2937' } 
+    }
   }, [diagramType])
 
-  // Сохранение
   const updateDiagramMutation = useMutation(
     (data) => diagramsAPI.updateDiagram(diagram.id, data),
     {
-      onSuccess: () => { toast.success('Diagram saved successfully!'); setIsSaving(false) },
+      onSuccess: () => { toast.success('Saved'); setIsSaving(false) },
       onError: () => { toast.error('Failed to save'); setIsSaving(false) },
     }
   )
@@ -128,7 +100,6 @@ const DiagramEditorContent = ({
     updateDiagramMutation.mutate({ content })
   }, [diagram, nodes, edges, isLocked, updateDiagramMutation])
 
-  // Авто-сохранение
   useEffect(() => {
     if (diagram && !isSaving && !isLocked) {
       const timer = setTimeout(handleSave, 5000)
@@ -136,39 +107,31 @@ const DiagramEditorContent = ({
     }
   }, [nodes, edges, diagram, isLocked])
 
-  // --- LOGIC: ON CONNECT (Создание связи) ---
+  // --- CONNECTION HANDLER ---
   const onConnect = useCallback((params) => {
     if (isLocked) return
 
-    // Логика для ERD (Прямая связь Entity -> Entity)
+    // ERD Special Logic
     if (diagramType === 'erd') {
-        const { source, target, sourceHandle, targetHandle } = params
-        
-        // Получаем настройки (1:1, 1:N) из текущего выбранного инструмента или дефолт
         const connSettings = getConnectionData(connectionType)
-
         const newEdge = {
             id: createUniqueId('erd-edge'),
-            source,
-            target,
-            sourceHandle, // Важно передавать handle ID, чтобы ReactFlow знал откуда вести
-            targetHandle,
-            type: 'erd', // Используем наш компонент ERDEdge
+            source: params.source,
+            target: params.target,
+            sourceHandle: params.sourceHandle,
+            targetHandle: params.targetHandle,
+            type: 'erd',
             data: {
-                // Передаем кардинальность для обоих концов
-                sourceCardinality: connSettings.sourceCardinality, 
+                sourceCardinality: connSettings.sourceCardinality,
                 targetCardinality: connSettings.targetCardinality,
-                sourceOptional: false, // Можно расширить настройки для optional
-                targetOptional: false,
             },
             style: { stroke: '#333', strokeWidth: 2 },
         }
-
         setEdges((eds) => addEdge(newEdge, eds))
         return
     }
 
-    // Логика для остальных диаграмм (BPMN и т.д.)
+    // Standard Logic (DFD & BPMN)
     setEdges((eds) => {
       const config = getEdgeConfig(connectionType)
       const mergedParams = { 
@@ -180,27 +143,18 @@ const DiagramEditorContent = ({
     })
   }, [diagramType, connectionType, isLocked, getEdgeConfig, setEdges])
 
-  // Drag & Drop узлов
   const onDrop = useCallback((event) => {
     event.preventDefault()
     if (isLocked) return
-
     const transferData = event.dataTransfer.getData('application/reactflow')
     if (!transferData) return
 
     let parsedData
     try { parsedData = JSON.parse(transferData) } catch (e) { return }
 
-    let position
-    if (reactFlowInstance.screenToFlowPosition) {
-        position = reactFlowInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY })
-    } else {
-        const bounds = event.currentTarget.getBoundingClientRect()
-        position = reactFlowInstance.project({
-            x: event.clientX - bounds.left,
-            y: event.clientY - bounds.top
-        })
-    }
+    let position = reactFlowInstance.screenToFlowPosition 
+        ? reactFlowInstance.screenToFlowPosition({ x: event.clientX, y: event.clientY })
+        : { x: 0, y: 0 }
 
     const nodeConfig = parsedData.nodeConfig || {}
     const newNode = {
@@ -209,33 +163,25 @@ const DiagramEditorContent = ({
       position,
       data: {
         ...nodeConfig,
-        label: nodeConfig.label || parsedData.name || 'Entity',
-        isContainer: isContainerShape(nodeConfig.shape),
+        label: nodeConfig.label || parsedData.name || 'Node',
       },
     }
     setNodes((nds) => nds.concat(newNode))
   }, [isLocked, reactFlowInstance, setNodes])
 
-  const onDragOver = useCallback((event) => {
-    event.preventDefault()
-    event.dataTransfer.dropEffect = isLocked ? 'none' : 'move'
-  }, [isLocked])
+  const onDragOver = useCallback((e) => { e.preventDefault(); e.dataTransfer.dropEffect = isLocked ? 'none' : 'move' }, [isLocked])
 
-  // --- CONTEXT MENUS ---
-
-  // Для узлов
+  // --- CONTEXT MENUS HANDLERS ---
   const handleNodeContextMenu = useCallback((event, node) => {
     event.preventDefault(); if (isLocked) return;
     setContextMenu({ type: 'node', x: event.clientX, y: event.clientY, data: node })
   }, [isLocked])
 
-  // Для связей (чтобы менять тип связи)
   const handleEdgeContextMenu = useCallback((event, edge) => {
     event.preventDefault(); if (isLocked) return;
     setContextMenu({ type: 'edge', x: event.clientX, y: event.clientY, data: edge })
   }, [isLocked])
 
-  // Двойной клик
   const handleNodeDoubleClick = useCallback((event, node) => {
     event.preventDefault(); if (isLocked) return;
     if (diagramType === 'erd' && isErdEntity(node)) {
@@ -246,14 +192,18 @@ const DiagramEditorContent = ({
     }
   }, [diagramType, isLocked, setNodes])
 
-  // Закрытие меню
-  useEffect(() => {
-    const fn = () => setContextMenu(null)
-    if (contextMenu) window.addEventListener('click', fn)
-    return () => window.removeEventListener('click', fn)
-  }, [contextMenu])
+  // --- ACTIONS ---
 
-  // Функция изменения кардинальности связи
+  // 1. Rename Edge (DFD)
+  const handleRenameEdge = (edge) => {
+      const newLabel = window.prompt("Enter data flow name:", edge.label);
+      if (newLabel !== null) {
+          setEdges((eds) => eds.map(e => e.id === edge.id ? { ...e, label: newLabel } : e));
+      }
+      setContextMenu(null);
+  }
+
+  // 2. Change Cardinality (ERD) - ВОТ ЭТА ФУНКЦИЯ
   const updateEdgeCardinality = (edgeId, type) => {
       const settings = ERD_PRESETS[type];
       setEdges((eds) => eds.map(e => {
@@ -272,105 +222,91 @@ const DiagramEditorContent = ({
       setContextMenu(null)
   }
 
+  // 3. Delete Item
+  const handleDelete = () => {
+      if (contextMenu?.type === 'node') {
+          setNodes((nds) => nds.filter((n) => n.id !== contextMenu.data.id))
+          setEdges((eds) => eds.filter((e) => e.source !== contextMenu.data.id && e.target !== contextMenu.data.id))
+      } else if (contextMenu?.type === 'edge') {
+          setEdges((eds) => eds.filter((e) => e.id !== contextMenu.data.id))
+      }
+      setContextMenu(null)
+  }
+
   return (
     <>
       <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        nodes={nodes} edges={edges}
+        onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeDoubleClick={handleNodeDoubleClick}
         onNodeContextMenu={handleNodeContextMenu}
-        onEdgeContextMenu={handleEdgeContextMenu} // Добавили обработчик для связей
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        fitView
-        connectionMode={ConnectionMode.Loose}
-        connectionRadius={30}
-        snapToGrid={true}
-        snapGrid={[15, 15]}
-        nodesDraggable={!isLocked}
-        nodesConnectable={!isLocked}
-        panOnDrag={!isLocked ? [1, 2] : true}
+        onEdgeContextMenu={handleEdgeContextMenu}
+        onDrop={onDrop} onDragOver={onDragOver}
+        nodeTypes={nodeTypes} edgeTypes={edgeTypes}
+        fitView connectionMode={ConnectionMode.Loose}
       >
         <Controls showInteractive={false} />
         <MiniMap nodeStrokeWidth={3} zoomable={!isLocked} pannable={!isLocked} />
         <Background variant="dots" gap={12} size={1} />
       </ReactFlow>
 
-      {/* CONTEXT MENU */}
+      {/* --- CONTEXT MENU DOM --- */}
       {contextMenu && (
-        <div 
-            className="fixed bg-white rounded shadow-lg border border-gray-200 py-1 z-50 text-sm min-w-[160px]" 
-            style={{ left: contextMenu.x, top: contextMenu.y }}
-        >
-            {/* Меню для Узла */}
+        <div className="fixed bg-white rounded shadow-lg border py-1 z-50 text-sm min-w-[180px]" style={{ left: contextMenu.x, top: contextMenu.y }}>
+            
+            {/* NODE MENU */}
             {contextMenu.type === 'node' && (
                 <>
                     {diagramType === 'erd' && isErdEntity(contextMenu.data) && (
-                        <button onClick={() => { setAttributeModal({ isOpen: true, node: contextMenu.data }); setContextMenu(null); }} className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"><span>✏️</span>Edit Attributes</button>
+                         <button onClick={() => { setAttributeModal({ isOpen: true, node: contextMenu.data }); setContextMenu(null); }} className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"><span>✏️</span>Edit Attributes</button>
                     )}
                     <button onClick={() => {
                         const label = window.prompt('Rename', contextMenu.data.data?.label);
                         if(label) setNodes(nds => nds.map(n => n.id === contextMenu.data.id ? {...n, data: {...n.data, label}} : n))
                         setContextMenu(null);
                     }} className="w-full px-4 py-2 text-left hover:bg-gray-100 flex items-center gap-2"><span>📝</span>Rename</button>
-                    
-                    <div className="h-px bg-gray-200 my-1"></div>
-                    
-                    <button onClick={() => {
-                        setNodes((nds) => nds.filter((n) => n.id !== contextMenu.data.id));
-                        setEdges((eds) => eds.filter((e) => e.source !== contextMenu.data.id && e.target !== contextMenu.data.id));
-                        setContextMenu(null);
-                    }} className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2"><span>🗑️</span>Delete</button>
                 </>
             )}
-
-            {/* Меню для Связи (ERD only) */}
-            {contextMenu.type === 'edge' && diagramType === 'erd' && (
+            
+            {/* EDGE MENU */}
+            {contextMenu.type === 'edge' && (
                 <>
-                    <div className="px-4 py-1 text-xs text-gray-400 uppercase font-semibold">Change Cardinality</div>
-                    <button onClick={() => updateEdgeCardinality(contextMenu.data.id, '1:1')} className="w-full px-4 py-2 text-left hover:bg-gray-100">One to One (1:1)</button>
-                    <button onClick={() => updateEdgeCardinality(contextMenu.data.id, '1:N')} className="w-full px-4 py-2 text-left hover:bg-gray-100">One to Many (1:N)</button>
-                    <button onClick={() => updateEdgeCardinality(contextMenu.data.id, 'N:1')} className="w-full px-4 py-2 text-left hover:bg-gray-100">Many to One (N:1)</button>
-                    <button onClick={() => updateEdgeCardinality(contextMenu.data.id, 'M:N')} className="w-full px-4 py-2 text-left hover:bg-gray-100">Many to Many (M:N)</button>
-                    
-                    <div className="h-px bg-gray-200 my-1"></div>
-                    
-                    <button onClick={() => {
-                        setEdges((eds) => eds.filter((e) => e.id !== contextMenu.data.id));
-                        setContextMenu(null);
-                    }} className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50">Delete Connection</button>
+                    {/* DFD Rename */}
+                    {diagramType === 'dfd' && (
+                        <button onClick={() => handleRenameEdge(contextMenu.data)} className="w-full px-4 py-2 text-left hover:bg-gray-100">Rename Data Flow</button>
+                    )}
+
+                    {/* ERD Cardinality - ВОТ ЭТОТ БЛОК ВЕРНУЛСЯ */}
+                    {diagramType === 'erd' && (
+                        <>
+                            <div className="px-4 py-1 text-xs text-gray-400 uppercase font-semibold border-b">Change Cardinality</div>
+                            <button onClick={() => updateEdgeCardinality(contextMenu.data.id, '1:1')} className="w-full px-4 py-2 text-left hover:bg-gray-100">One to One (1:1)</button>
+                            <button onClick={() => updateEdgeCardinality(contextMenu.data.id, '1:N')} className="w-full px-4 py-2 text-left hover:bg-gray-100">One to Many (1:N)</button>
+                            <button onClick={() => updateEdgeCardinality(contextMenu.data.id, 'N:1')} className="w-full px-4 py-2 text-left hover:bg-gray-100">Many to One (N:1)</button>
+                            <button onClick={() => updateEdgeCardinality(contextMenu.data.id, 'M:N')} className="w-full px-4 py-2 text-left hover:bg-gray-100">Many to Many (M:N)</button>
+                        </>
+                    )}
                 </>
             )}
 
-             {/* Меню для Связи (Обычное) */}
-             {contextMenu.type === 'edge' && diagramType !== 'erd' && (
-                <button onClick={() => {
-                    setEdges((eds) => eds.filter((e) => e.id !== contextMenu.data.id));
-                    setContextMenu(null);
-                }} className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50">Delete Connection</button>
-            )}
+            <div className="h-px bg-gray-200 my-1"></div>
+            <button onClick={handleDelete} className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 flex items-center gap-2"><span>🗑️</span>Delete</button>
         </div>
       )}
+      
+      <div onClick={() => setContextMenu(null)} className={`fixed inset-0 z-40 ${contextMenu ? 'block' : 'hidden'}`}></div>
 
       <AttributeModal
         isOpen={attributeModal.isOpen}
         onClose={() => setAttributeModal({ isOpen: false, node: null })}
-        onSave={(data) => {
-            setNodes((nds) => nds.map((n) => n.id === attributeModal.node.id ? { ...n, data: { ...n.data, ...data } } : n));
-        }}
+        onSave={(data) => setNodes(nds => nds.map(n => n.id === attributeModal.node.id ? { ...n, data: { ...n.data, ...data } } : n))}
         nodeData={attributeModal.node?.data}
         isEntity={isErdEntity(attributeModal.node)}
       />
     </>
   )
 }
-
-// --- WRAPPER COMPONENT ---
 
 const DiagramEditor = (props) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([])
@@ -387,49 +323,24 @@ const DiagramEditor = (props) => {
             setNodes(content.nodes || [])
             setEdges(content.edges || [])
           } catch (e) { console.error("Load Error", e) }
-        } else {
-            setNodes([])
-            setEdges([])
-        }
+        } else { setNodes([]); setEdges([]) }
         setIsLoading(false)
     }, 100)
     return () => clearTimeout(timer)
   }, [props.diagram, setNodes, setEdges])
 
-  const getDiagramTitle = () => {
-    switch (props.diagramType) {
-      case 'bpmn': return 'BPMN Diagram';
-      case 'erd': return 'ER Diagram';
-      default: return 'Diagram Editor';
-    }
-  }
-
   return (
     <div className="h-full flex flex-col">
        <div className="flex items-center justify-between p-4 bg-white border-b">
-         <div className="flex items-center space-x-4">
-            <h2 className="text-lg font-medium text-gray-900">{props.diagram?.name || 'Untitled'}</h2>
-            <span className="text-sm text-gray-500">{getDiagramTitle()}</span>
-         </div>
-         <div className="flex gap-2">
-            <button className="btn btn-sm btn-primary flex items-center gap-1" onClick={() => toast.success('Saved')}><Save className="w-4 h-4"/>Save</button>
-         </div>
+         <h2 className="text-lg font-medium">{props.diagram?.name || 'Untitled'}</h2>
+         <button className="btn btn-sm btn-primary flex gap-1" onClick={() => toast.success('Saved')}><Save className="w-4"/>Save</button>
        </div>
-
        <div className="flex-1 relative">
-         {isLoading ? (
-             <div className="absolute inset-0 flex flex-col items-center justify-center bg-white z-50">
-                 <span className="text-gray-500">Loading...</span>
-             </div>
-         ) : (
+         {isLoading ? <div className="absolute inset-0 flex items-center justify-center bg-white z-50">Loading...</div> : 
              <ReactFlowProvider>
-                <DiagramEditorContent 
-                    {...props} 
-                    nodes={nodes} setNodes={setNodes} onNodesChange={onNodesChange} 
-                    edges={edges} setEdges={setEdges} onEdgesChange={onEdgesChange} 
-                />
+                <DiagramEditorContent {...props} nodes={nodes} setNodes={setNodes} onNodesChange={onNodesChange} edges={edges} setEdges={setEdges} onEdgesChange={onEdgesChange} />
              </ReactFlowProvider>
-         )}
+         }
        </div>
     </div>
   )

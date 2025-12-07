@@ -1,32 +1,27 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { ArrowRight, Circle, Database, Square, Triangle, Zap, ChevronDown, ChevronRight } from 'lucide-react'
+import { 
+  ArrowRight, Circle, Database, Square, Triangle, Zap, 
+  ChevronDown, ChevronRight, Box, Layers, ArrowRightCircle,
+  FileText, Mail, Clock, HelpCircle, Radio, TrendingUp,
+  AlertCircle, Undo2, Ban, Link, Sparkles, PlusCircle,
+  User, Cog, FileCode, Hand, Send, Download, Scale, PhoneCall, Library,
+  X, Plus, CircleDot, Equal, Files, ArrowDownToLine, ArrowUpFromLine,
+  StickyNote, LayoutPanelTop, LayoutPanelLeft, Slash, ArrowUpRight, ArrowBigRight,
+  StretchHorizontal
+} from 'lucide-react'
 import * as Icons from 'lucide-react'
 
 const capitalize = (value = '') => value.charAt(0).toUpperCase() + value.slice(1)
-
 const ALL_SIDES = ['top', 'right', 'bottom', 'left']
 
+// ==========================================
+// BPMN CONFIGURATION & CONSTANTS
+// ==========================================
+
 const EVENT_STYLES = {
-  start: {
-    background: '#ecfdf5',
-    borderColor: '#10b981',
-    textColor: '#065f46',
-    borderWidth: 2,
-  },
-  intermediate: {
-    background: '#eef2ff',
-    borderColor: '#6366f1',
-    textColor: '#312e81',
-    borderWidth: 2,
-    innerBorderWidth: 2,
-    innerBorderColor: '#a5b4fc',
-  },
-  end: {
-    background: '#fef2f2',
-    borderColor: '#ef4444',
-    textColor: '#7f1d1d',
-    borderWidth: 4,
-  },
+  start: { background: '#ecfdf5', borderColor: '#10b981', textColor: '#065f46', borderWidth: 2 },
+  intermediate: { background: '#eef2ff', borderColor: '#6366f1', textColor: '#312e81', borderWidth: 2, innerBorderWidth: 2, innerBorderColor: '#a5b4fc' },
+  end: { background: '#fef2f2', borderColor: '#ef4444', textColor: '#7f1d1d', borderWidth: 4 },
 }
 
 const EVENT_VARIANTS = [
@@ -54,20 +49,8 @@ const TASK_VARIANTS = [
   { id: 'receive-task', name: 'Receive Task', icon: 'Download', color: '#22c55e' },
   { id: 'business-rule-task', name: 'Business Rule Task', icon: 'Scale', color: '#d946ef' },
   { id: 'call-activity', name: 'Call Activity', icon: 'PhoneCall', color: '#f43f5e', extra: { borderWidth: 4 } },
-  {
-    id: 'subprocess-collapsed',
-    name: 'Subprocess (Collapsed)',
-    icon: 'Library',
-    color: '#14b8a6',
-    extra: { label: 'Subprocess (+)', fontSize: 12 },
-  },
-  {
-    id: 'event-subprocess',
-    name: 'Event Subprocess',
-    icon: 'Zap',
-    color: '#0ea5e9',
-    extra: { borderStyle: 'dashed' },
-  },
+  { id: 'subprocess-collapsed', name: 'Subprocess (Collapsed)', icon: 'Library', color: '#14b8a6', extra: { label: 'Subprocess (+)', fontSize: 12 } },
+  { id: 'event-subprocess', name: 'Event Subprocess', icon: 'Zap', color: '#0ea5e9', extra: { borderStyle: 'dashed' } },
 ]
 
 const GATEWAYS = [
@@ -93,126 +76,36 @@ const ARTIFACTS = [
 ]
 
 const SWIMLANES = [
-  {
-    id: 'pool',
-    name: 'Pool (Participant)',
-    icon: 'LayoutPanelTop',
-    color: '#94a3b8',
-    shape: 'lane',
-    nodeConfig: {
-      width: 520,
-      height: 140,
-      borderColor: '#475569',
-      borderWidth: 2,
-      header: 'Participant',
-      headerPosition: 'left',
-      headerBackground: '#e2e8f0',
-      isContainer: true,
-      containerShape: 'pool',
-    },
-  },
-  {
-    id: 'lane',
-    name: 'Lane',
-    icon: 'LayoutPanelLeft',
-    color: '#cbd5f5',
-    shape: 'lane',
-    nodeConfig: {
-      width: 520,
-      height: 100,
-      borderColor: '#64748b',
-      borderWidth: 2,
-      header: 'Lane',
-      headerPosition: 'top',
-      headerBackground: '#e5e7eb',
-      isContainer: true,
-      containerShape: 'lane',
-    },
-  },
+  { id: 'pool', name: 'Pool', icon: 'LayoutPanelTop', color: '#94a3b8', shape: 'lane', nodeConfig: { width: 500, height: 200, header: 'Participant', headerPosition: 'left', headerBackground: '#e2e8f0', isContainer: true, containerShape: 'pool' } },
+  { id: 'lane', name: 'Lane', icon: 'LayoutPanelLeft', color: '#cbd5f5', shape: 'lane', nodeConfig: { width: 500, height: 120, header: 'Lane', headerPosition: 'top', headerBackground: '#e5e7eb', isContainer: true, containerShape: 'lane' } },
 ]
 
 const BPMN_CONNECTORS = [
-  {
-    id: 'sequence-flow',
-    name: 'Sequence Flow',
-    connectionType: 'sequence-flow',
-    description: 'Solid control flow',
-    icon: 'ArrowRight',
-  },
-  {
-    id: 'default-flow',
-    name: 'Default Flow',
-    connectionType: 'default-flow',
-    description: 'Default branch from gateway',
-    icon: 'ArrowBigRight',
-  },
-  {
-    id: 'conditional-flow',
-    name: 'Conditional Flow',
-    connectionType: 'conditional-flow',
-    description: 'Conditional branch from activity',
-    icon: 'HelpCircle',
-  },
-  {
-    id: 'message-flow',
-    name: 'Message Flow',
-    connectionType: 'message-flow',
-    description: 'Communication across pools',
-    icon: 'Mail',
-  },
-  {
-    id: 'association',
-    name: 'Association',
-    connectionType: 'association',
-    description: 'Annotation or data usage',
-    icon: 'Slash',
-  },
-  {
-    id: 'data-association',
-    name: 'Data Association',
-    connectionType: 'data-association',
-    description: 'Data movement',
-    icon: 'ArrowUpRight',
-  },
-  {
-    id: 'compensation-flow',
-    name: 'Compensation',
-    connectionType: 'compensation-flow',
-    description: 'Compensation handler',
-    icon: 'Undo2',
-  },
+  { id: 'sequence-flow', name: 'Sequence Flow', connectionType: 'sequence-flow', description: 'Control flow', icon: 'ArrowRight' },
+  { id: 'default-flow', name: 'Default Flow', connectionType: 'default-flow', description: 'Default path', icon: 'ArrowBigRight' },
+  { id: 'conditional-flow', name: 'Conditional Flow', connectionType: 'conditional-flow', description: 'With condition', icon: 'HelpCircle' },
+  { id: 'message-flow', name: 'Message Flow', connectionType: 'message-flow', description: 'Across pools', icon: 'Mail' },
+  { id: 'association', name: 'Association', connectionType: 'association', description: 'Artifact link', icon: 'Slash' },
+  { id: 'data-association', name: 'Data Association', connectionType: 'data-association', description: 'Data flow', icon: 'ArrowUpRight' },
+  { id: 'compensation-flow', name: 'Compensation', connectionType: 'compensation-flow', description: 'Undo action', icon: 'Undo2' },
 ]
 
 const createEventElement = (stage, variant) => {
   const baseName = `${capitalize(stage)} ${variant.label} Event`
   const style = EVENT_STYLES[stage]
-  const handlesByStage = {
-    start: { incoming: [], outgoing: ALL_SIDES },
-    intermediate: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
-    end: { incoming: ALL_SIDES, outgoing: [] },
-  }
   return {
     id: `bpmn-${stage}-${variant.key}-event`,
     name: baseName,
     previewColor: style.borderColor,
     paletteIcon: variant.icon,
     nodeConfig: {
-      label: baseName,
-      shape: 'circle',
-      width: 78,
-      height: 78,
-      background: style.background,
-      borderColor: style.borderColor,
-      borderWidth: style.borderWidth,
-      innerBorderWidth: style.innerBorderWidth,
-      innerBorderColor: style.innerBorderColor,
-      textColor: style.textColor,
-      showLabelInside: false,
-      labelPosition: 'bottom',
-      icon: variant.icon,
-      iconColor: style.borderColor,
-      iconSize: 20,
-      handles: handlesByStage[stage] || { incoming: ALL_SIDES, outgoing: ALL_SIDES },
+      label: baseName, shape: 'circle', width: 40, height: 40,
+      background: style.background, borderColor: style.borderColor,
+      borderWidth: style.borderWidth, innerBorderWidth: style.innerBorderWidth,
+      innerBorderColor: style.innerBorderColor, textColor: style.textColor,
+      showLabelInside: false, labelPosition: 'bottom',
+      icon: variant.icon, iconColor: style.borderColor, iconSize: 20,
+      handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
     },
   }
 }
@@ -224,141 +117,57 @@ const buildBpmnGroups = () => {
   }))
 
   const activities = TASK_VARIANTS.map((task) => ({
-    id: `bpmn-${task.id}`,
-    name: task.name,
-    previewColor: task.color,
-    paletteIcon: task.icon,
+    id: `bpmn-${task.id}`, name: task.name, previewColor: task.color, paletteIcon: task.icon,
     nodeConfig: {
-      label: task.extra?.label || task.name,
-      shape: 'rectangle',
-      width: 200,
-      height: 96,
-      background: '#ffffff',
-      borderColor: task.color,
-      borderWidth: task.extra?.borderWidth || 2,
-      borderStyle: task.extra?.borderStyle || 'solid',
-      borderRadius: 18,
-      textColor: '#111827',
-      icon: task.icon,
-      iconColor: task.color,
-      padding: 16,
-      fontSize: task.extra?.fontSize,
+      label: task.extra?.label || task.name, shape: 'rectangle', width: 100, height: 80,
+      background: '#ffffff', borderColor: task.color, borderWidth: task.extra?.borderWidth || 2,
+      borderStyle: task.extra?.borderStyle || 'solid', borderRadius: 8, textColor: '#111827',
+      icon: task.icon, iconColor: task.color,
       handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
     },
   }))
 
   const gateways = GATEWAYS.map((gateway) => ({
-    id: `bpmn-${gateway.id}`,
-    name: gateway.name,
-    previewColor: gateway.color,
-    paletteIcon: gateway.icon,
+    id: `bpmn-${gateway.id}`, name: gateway.name, previewColor: gateway.color, paletteIcon: gateway.icon,
     nodeConfig: {
-      label: gateway.name,
-      shape: 'diamond',
-      width: 120,
-      height: 120,
-      background: '#ffffff',
-      borderColor: gateway.color,
-      borderWidth: 3,
-      textColor: gateway.color,
-      showLabelInside: false,
-      labelPosition: 'bottom',
-      icon: gateway.icon,
-      iconColor: gateway.color,
+      label: gateway.name, shape: 'diamond', width: 50, height: 50,
+      background: '#ffffff', borderColor: gateway.color, borderWidth: 2, textColor: gateway.color,
+      showLabelInside: false, labelPosition: 'bottom', icon: gateway.icon, iconColor: gateway.color,
       handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
     },
   }))
 
-  const dataObjects = DATA_OBJECTS.map((dataObject) => ({
-    id: `bpmn-${dataObject.id}`,
-    name: dataObject.name,
-    previewColor: dataObject.color,
-    paletteIcon: dataObject.icon,
+  const dataObjects = DATA_OBJECTS.map((obj) => ({
+    id: `bpmn-${obj.id}`, name: obj.name, previewColor: obj.color, paletteIcon: obj.icon,
     nodeConfig: {
-      label: dataObject.name,
-      shape: dataObject.shape || 'data-object',
-      width: dataObject.shape === 'cylinder' ? 160 : 180,
-      height: dataObject.shape === 'cylinder' ? 110 : 100,
-      background: '#ffffff',
-      borderColor: dataObject.color,
-      borderWidth: 2,
-      textColor: '#111827',
-      icon: dataObject.icon,
-      iconColor: dataObject.color,
+      label: obj.name, shape: obj.shape || 'data-object', width: 40, height: 50,
+      background: '#ffffff', borderColor: obj.color, borderWidth: 2, textColor: '#111827',
+      icon: obj.icon, iconColor: obj.color,
       handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
-    },
-  }))
-
-  const artifacts = ARTIFACTS.map((artifact) => ({
-    id: `bpmn-${artifact.id}`,
-    name: artifact.name,
-    previewColor: artifact.color,
-    paletteIcon: artifact.icon,
-    nodeConfig: {
-      label: artifact.name,
-      shape: artifact.shape || 'rectangle',
-      width: artifact.shape === 'annotation' ? 220 : 260,
-      height: artifact.shape === 'annotation' ? 80 : 160,
-      background: '#ffffff',
-      borderColor: artifact.color,
-      borderWidth: artifact.extra?.borderWidth || 2,
-      borderStyle: artifact.extra?.borderStyle || 'solid',
-      textColor: '#111827',
-      icon: artifact.icon,
-      iconColor: artifact.color,
-      showLabelInside: artifact.shape !== 'annotation',
-      labelPosition: artifact.shape === 'annotation' ? 'inside' : 'bottom',
-      handles:
-        artifact.id === 'group'
-          ? { incoming: [], outgoing: [] }
-          : { incoming: ALL_SIDES, outgoing: ALL_SIDES },
     },
   }))
 
   const swimlanes = SWIMLANES.map((lane) => ({
-    id: `bpmn-${lane.id}`,
-    name: lane.name,
-    previewColor: lane.color,
-    paletteIcon: lane.icon,
+    id: `bpmn-${lane.id}`, name: lane.name, previewColor: lane.color, paletteIcon: lane.icon,
     nodeConfig: {
-      label: lane.icon === 'LayoutPanelTop' ? 'Pool' : 'Lane',
-      shape: lane.shape,
-      background: '#f8fafc',
-      borderColor: lane.nodeConfig.borderColor,
-      borderWidth: lane.nodeConfig.borderWidth,
-      header: lane.nodeConfig.header,
-      headerPosition: lane.nodeConfig.headerPosition,
-      headerBackground: lane.nodeConfig.headerBackground,
-      width: lane.nodeConfig.width,
-      height: lane.nodeConfig.height,
+      ...lane.nodeConfig,
+      shape: lane.shape, background: '#f8fafc', borderColor: '#475569', borderWidth: 2,
       handles: { incoming: [], outgoing: [] },
     },
   }))
 
   return [
     ...eventGroups,
-    {
-      title: 'Activities',
-      items: activities,
-    },
-    {
-      title: 'Gateways',
-      items: gateways,
-    },
-    {
-      title: 'Data & Stores',
-      items: dataObjects,
-    },
-    {
-      title: 'Artifacts',
-      items: artifacts,
-    },
-    {
-      title: 'Pools & Lanes',
-      items: swimlanes,
-    },
+    { title: 'Activities', items: activities },
+    { title: 'Gateways', items: gateways },
+    { title: 'Data & Stores', items: dataObjects },
+    { title: 'Pools & Lanes', items: swimlanes },
   ]
 }
+
+// ==========================================
+// ERD CONFIGURATION
+// ==========================================
 
 const buildErdConfiguration = () => {
   const entities = [
@@ -368,38 +177,104 @@ const buildErdConfiguration = () => {
       paletteIcon: 'Square',
       previewColor: '#2563eb',
       nodeConfig: {
-        label: 'Entity',
-        shape: 'entity',
-        width: 240,
-        height: 200,
-        background: '#ffffff',
-        borderColor: '#2563eb',
-        borderWidth: 2,
-        borderRadius: 12,
-        textColor: '#0f172a',
-        headerBackground: '#2563eb',
-        headerTextColor: '#ffffff',
-        attributes: [],
+        label: 'Entity', shape: 'entity', width: 200, height: 160,
+        background: '#ffffff', borderColor: '#2563eb', borderWidth: 2,
+        textColor: '#0f172a', attributes: [],
         handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
       },
     },
   ]
 
-  // Мы убрали relationships и connectors, как вы просили.
-  // Теперь возвращаем чистую конфигурацию только с сущностями.
-
+  // Возвращаем пустой массив connectors, так как вы просили убрать их из сайдбара
   return {
-    groups: [
-      {
-        title: 'Entities',
-        items: entities,
-      },
-    ],
-    // Убираем заголовок и список типов связей
+    groups: [{ title: 'Entities', items: entities }],
     connectorsTitle: null,
     connectors: [],
   }
 }
+
+// ==========================================
+// DFD CONFIGURATION (Yourdon & DeMarco)
+// ==========================================
+
+const buildDfdConfiguration = () => {
+    const primaryColor = '#8b5cf6' // Violet-500
+    const primaryBg = '#f5f3ff' // Violet-50
+    
+    const elements = [
+        {
+            id: 'dfd-process',
+            name: 'Process',
+            paletteIcon: 'Circle',
+            previewColor: primaryColor,
+            nodeConfig: {
+                label: 'Process',
+                shape: 'circle', // Круг
+                width: 100, height: 100,
+                background: primaryBg,
+                borderColor: primaryColor,
+                borderWidth: 2,
+                textColor: '#4c1d95',
+                handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
+            }
+        },
+        {
+            id: 'dfd-external-entity',
+            name: 'External Entity',
+            paletteIcon: 'Square',
+            previewColor: '#64748b',
+            nodeConfig: {
+                label: 'External Entity',
+                shape: 'rectangle', // Прямоугольник
+                width: 140, height: 80,
+                background: '#f1f5f9',
+                borderColor: '#475569',
+                borderWidth: 2,
+                textColor: '#1e293b',
+                fontWeight: 700,
+                handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
+            }
+        },
+        {
+            id: 'dfd-data-store',
+            name: 'Data Store',
+            paletteIcon: 'StretchHorizontal', // Иконка похожая на две линии
+            previewColor: primaryColor,
+            nodeConfig: {
+                label: 'Data Store',
+                shape: 'data-store', // Кастомная форма (линии)
+                width: 160, height: 60,
+                background: 'transparent',
+                borderColor: primaryColor,
+                borderWidth: 2,
+                textColor: '#4c1d95',
+                handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
+            }
+        }
+    ]
+
+    const connectors = [
+        {
+            id: 'dfd-data-flow',
+            name: 'Data Flow',
+            connectionType: 'data-flow',
+            description: 'Movement of data',
+            icon: 'ArrowRight',
+        }
+    ]
+
+    return {
+        groups: [
+            { title: 'DFD Elements', items: elements },
+        ],
+        connectorsTitle: 'Connections',
+        connectors: connectors
+    }
+}
+
+// ==========================================
+// MAIN COMPONENT
+// ==========================================
 
 const DiagramPalette = ({ diagramType, selectedConnectionType, onConnectionTypeChange }) => {
   const configuration = useMemo(() => {
@@ -415,166 +290,11 @@ const DiagramPalette = ({ diagramType, selectedConnectionType, onConnectionTypeC
       return buildErdConfiguration()
     }
 
-    const fallbackElements = (() => {
-      switch (diagramType) {
-        case 'erd':
-          return [
-            {
-              id: 'entity',
-              name: 'Entity',
-              icon: Square,
-              previewColor: '#0ea5e9',
-              nodeConfig: {
-                shape: 'entity',
-                background: '#e0f2fe',
-                borderColor: '#0284c7',
-                textColor: '#0c4a6e',
-                width: 220,
-                height: 120,
-                handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
-              },
-            },
-            {
-              id: 'attribute',
-              name: 'Attribute',
-              icon: Circle,
-              previewColor: '#22c55e',
-              nodeConfig: {
-                shape: 'circle',
-                background: '#bbf7d0',
-                borderColor: '#15803d',
-                textColor: '#14532d',
-                width: 120,
-                height: 120,
-                handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
-              },
-            },
-            {
-              id: 'relationship',
-              name: 'Relationship',
-              icon: Triangle,
-              previewColor: '#a855f7',
-              nodeConfig: {
-                shape: 'diamond',
-                background: '#e9d5ff',
-                borderColor: '#9333ea',
-                textColor: '#581c87',
-                width: 130,
-                height: 130,
-                handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
-              },
-            },
-            {
-              id: 'primary-key',
-              name: 'Primary Key',
-              icon: Circle,
-              previewColor: '#f97316',
-              nodeConfig: {
-                shape: 'circle',
-                background: '#fed7aa',
-                borderColor: '#ea580c',
-                textColor: '#7c2d12',
-                width: 110,
-                height: 110,
-                decoration: 'underline',
-                handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
-              },
-            },
-            {
-              id: 'foreign-key',
-              name: 'Foreign Key',
-              icon: Circle,
-              previewColor: '#facc15',
-              nodeConfig: {
-                shape: 'circle',
-                background: '#fef08a',
-                borderColor: '#eab308',
-                textColor: '#713f12',
-                width: 110,
-                height: 110,
-                decoration: 'dashed',
-                handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
-              },
-            },
-          ]
-        case 'dfd':
-          return [
-            {
-              id: 'process',
-              name: 'Process',
-              icon: Circle,
-              previewColor: '#2563eb',
-              nodeConfig: {
-                shape: 'circle',
-                background: '#bfdbfe',
-                borderColor: '#1d4ed8',
-                textColor: '#1e3a8a',
-                width: 130,
-                height: 130,
-                handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
-              },
-            },
-            {
-              id: 'data-store',
-              name: 'Data Store',
-              icon: Database,
-              previewColor: '#14b8a6',
-              nodeConfig: {
-                shape: 'cylinder',
-                background: '#ccfbf1',
-                borderColor: '#0f766e',
-                textColor: '#115e59',
-                width: 180,
-                height: 110,
-                handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
-              },
-            },
-            {
-              id: 'external-entity',
-              name: 'External Entity',
-              icon: Square,
-              previewColor: '#f472b6',
-              nodeConfig: {
-                shape: 'rectangle',
-                background: '#fdf2f8',
-                borderColor: '#db2777',
-                textColor: '#831843',
-                width: 200,
-                height: 90,
-                handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
-              },
-            },
-            {
-              id: 'data-flow',
-              name: 'Data Flow',
-              icon: ArrowRight,
-              previewColor: '#4b5563',
-              nodeConfig: {
-                shape: 'parallelogram',
-                background: '#d1d5db',
-                borderColor: '#1f2937',
-                textColor: '#111827',
-                width: 220,
-                height: 60,
-                handles: { incoming: ALL_SIDES, outgoing: ALL_SIDES },
-              },
-            },
-          ]
-        default:
-          return []
-      }
-    })()
-
-    return {
-      groups: [
-        {
-          title: `${diagramType?.toUpperCase()} Elements`,
-          items: fallbackElements,
-        },
-      ],
-      connectors: [],
-      connectorsTitle: null,
+    if (diagramType === 'dfd') {
+      return buildDfdConfiguration()
     }
+
+    return { groups: [], connectors: [] }
   }, [diagramType])
 
   const handleDragStart = (event, element) => {
@@ -590,11 +310,10 @@ const DiagramPalette = ({ diagramType, selectedConnectionType, onConnectionTypeC
   const [collapsedGroups, setCollapsedGroups] = useState({})
 
   const groupsKey = useMemo(
-    () =>
-      [
-        configuration.groups.map((group) => group.title).join('|'),
-        configuration.connectorsTitle || '',
-      ].join('::'),
+    () => [
+      configuration.groups.map((group) => group.title).join('|'),
+      configuration.connectorsTitle || ''
+    ].join('::'),
     [configuration.groups, configuration.connectorsTitle]
   )
 
@@ -612,10 +331,7 @@ const DiagramPalette = ({ diagramType, selectedConnectionType, onConnectionTypeC
   }, [groupsKey, configuration.connectorsTitle])
 
   const toggleGroup = (title) => {
-    setCollapsedGroups((prev) => ({
-      ...prev,
-      [title]: !prev?.[title],
-    }))
+    setCollapsedGroups((prev) => ({ ...prev, [title]: !prev?.[title] }))
   }
 
   const renderConnector = (connector) => {
@@ -641,11 +357,7 @@ const DiagramPalette = ({ diagramType, selectedConnectionType, onConnectionTypeC
               isSelected ? 'bg-primary-100 text-primary-600' : 'bg-gray-100 text-gray-600'
             }`}
           >
-            {connectorIcon ? (
-              React.createElement(connectorIcon, { className: 'h-4 w-4' })
-            ) : (
-              <FallbackIcon className="h-4 w-4" />
-            )}
+            {connectorIcon ? React.createElement(connectorIcon, { className: 'h-4 w-4' }) : <FallbackIcon className="h-4 w-4" />}
           </div>
           <div>
             <div className="text-sm font-semibold">{connector.name}</div>
@@ -658,63 +370,47 @@ const DiagramPalette = ({ diagramType, selectedConnectionType, onConnectionTypeC
 
   return (
     <div className="h-full flex flex-col">
-      <div className="p-4 border-b">
-        <h2 className="text-lg font-medium text-gray-900">
-          {diagramType.toUpperCase()} Elements
+      <div className="p-4 border-b bg-gray-50">
+        <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">
+          {diagramType?.toUpperCase()} Elements
         </h2>
-        <p className="text-sm text-gray-500">
-          Drag nodes or select connection type below
+        <p className="text-xs text-gray-500 mt-1">
+          Drag nodes or select connection type
         </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {configuration.groups.map((group) => {
           const isCollapsed = collapsedGroups[group.title]
-
           return (
-            <div key={group.title} className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                  {group.title}
-                </h3>
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(group.title)}
-                  className="text-gray-500 hover:text-gray-700"
-                  aria-label={isCollapsed ? 'Expand group' : 'Collapse group'}
-                >
-                  {isCollapsed ? (
-                    <ChevronRight className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </button>
+            <div key={group.title} className="space-y-2">
+              <div 
+                className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded"
+                onClick={() => toggleGroup(group.title)}
+              >
+                <h3 className="text-xs font-semibold text-gray-500 uppercase">{group.title}</h3>
+                {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
               </div>
+              
               {!isCollapsed && (
                 <div className="space-y-2">
                   {group.items.map((element) => {
                     const iconName = element.paletteIcon
-                    const IconComponent = element.icon
-                      ? element.icon
-                      : iconName && Icons[iconName]
-                        ? Icons[iconName]
-                        : Square
+                    const IconComponent = element.icon || (iconName && Icons[iconName] ? Icons[iconName] : Square)
                     return (
                       <div
                         key={element.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, element)}
-                        className="flex items-center space-x-3 p-3 rounded-lg border border-gray-200 bg-white hover:bg-gray-50 cursor-move transition-colors"
+                        className="flex items-center space-x-3 p-2 rounded border border-gray-200 bg-white hover:border-primary-400 hover:shadow-sm cursor-move transition-all"
                       >
                         <div
-                          className="w-8 h-8 rounded flex items-center justify-center text-white"
+                          className="w-8 h-8 rounded flex items-center justify-center text-white shadow-sm"
                           style={{ backgroundColor: element.previewColor || '#64748b' }}
                         >
                           <IconComponent className="h-4 w-4" />
                         </div>
-                        <span className="text-sm font-medium text-gray-900">
-                          {element.name}
-                        </span>
+                        <span className="text-sm text-gray-700">{element.name}</span>
                       </div>
                     )
                   })}
@@ -725,41 +421,23 @@ const DiagramPalette = ({ diagramType, selectedConnectionType, onConnectionTypeC
         })}
 
         {configuration.connectors && configuration.connectors.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+          <div className="space-y-2 pt-4 border-t">
+            <div 
+              className="flex items-center justify-between cursor-pointer hover:bg-gray-100 p-1 rounded"
+              onClick={() => toggleGroup(configuration.connectorsTitle)}
+            >
+              <h3 className="text-xs font-semibold text-gray-500 uppercase">
                 {configuration.connectorsTitle || 'Connectors'}
               </h3>
-              <button
-                type="button"
-                onClick={() => toggleGroup(configuration.connectorsTitle || 'Connectors')}
-                className="text-gray-500 hover:text-gray-700"
-                aria-label={
-                  collapsedGroups[configuration.connectorsTitle || 'Connectors']
-                    ? 'Expand connectors'
-                    : 'Collapse connectors'
-                }
-              >
-                {collapsedGroups[configuration.connectorsTitle || 'Connectors'] ? (
-                  <ChevronRight className="h-4 w-4" />
-                ) : (
-                  <ChevronDown className="h-4 w-4" />
-                )}
-              </button>
+              {collapsedGroups[configuration.connectorsTitle] ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
             </div>
-            {!collapsedGroups[configuration.connectorsTitle || 'Connectors'] && (
+            {!collapsedGroups[configuration.connectorsTitle] && (
               <div className="space-y-2">
                 {configuration.connectors.map(renderConnector)}
               </div>
             )}
           </div>
         )}
-      </div>
-
-      <div className="p-4 border-t bg-gray-50">
-        <div className="text-xs text-gray-500">
-          <p>💡 Tip: Drag nodes onto the canvas or select a connector before drawing an edge.</p>
-        </div>
       </div>
     </div>
   )
