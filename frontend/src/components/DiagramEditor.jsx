@@ -141,7 +141,7 @@ const DiagramEditorContent = ({
   diagram, diagramType, isLocked, connectionType, 
   nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange,
   onDataChange, initialDataRef, setForceSaveRef, onNavigateToDiagram,
-  highlightElementId
+  highlightElementId, isReadOnly
 }) => {
   const reactFlowInstance = useReactFlow()
   const queryClient = useQueryClient()
@@ -347,7 +347,7 @@ const DiagramEditorContent = ({
 
   // --- SAVE HANDLER ---
   const handleSave = useCallback(async () => {
-    if (!diagram || isLocked || !reactFlowInstance || isSaving) return
+    if (!diagram || isReadOnly || !reactFlowInstance || isSaving) return
     
     const currentNodes = reactFlowInstance.getNodes()
     const currentEdges = reactFlowInstance.getEdges()
@@ -380,10 +380,12 @@ const DiagramEditorContent = ({
     }
     
     await updateDiagramMutation.mutateAsync(payload)
-  }, [diagram, isLocked, reactFlowInstance, isSaving, updateDiagramMutation])
+  }, [diagram, isReadOnly, reactFlowInstance, isSaving, updateDiagramMutation])
 
   // Mark as dirty when user makes changes and debounce save
   const scheduleAutosave = useCallback(() => {
+    if (isReadOnly) return
+
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current)
     }
@@ -393,32 +395,44 @@ const DiagramEditorContent = ({
         handleSave()
       }
     }, 400)
-  }, [handleSave])
+  }, [handleSave, isReadOnly])
 
   const markDirty = useCallback(() => {
+    if (isReadOnly) return
+
     isDirtyRef.current = true
     onDataChange?.()
     scheduleAutosave()
-  }, [onDataChange, scheduleAutosave])
+  }, [onDataChange, scheduleAutosave, isReadOnly])
 
   // Custom nodes change handler that tracks dirty state
   const handleNodesChange = useCallback((changes) => {
+    if (isReadOnly) {
+      onNodesChange(changes)
+      return
+    }
+
     // Only treat real edits as dirty: position/add/remove
     const significantChanges = changes.filter(c => ['position', 'add', 'remove'].includes(c.type))
     if (significantChanges.length > 0) {
       markDirty()
     }
     onNodesChange(changes)
-  }, [onNodesChange, markDirty])
+  }, [onNodesChange, markDirty, isReadOnly])
 
   // Custom edges change handler
   const handleEdgesChange = useCallback((changes) => {
+    if (isReadOnly) {
+      onEdgesChange(changes)
+      return
+    }
+
     const significantChanges = changes.filter(c => ['add', 'remove'].includes(c.type))
     if (significantChanges.length > 0) {
       markDirty()
     }
     onEdgesChange(changes)
-  }, [onEdgesChange, markDirty])
+  }, [onEdgesChange, markDirty, isReadOnly])
 
   // Cleanup pending autosave on unmount
   useEffect(() => {
@@ -432,7 +446,7 @@ const DiagramEditorContent = ({
   // Save on unmount if dirty
   useEffect(() => {
     return () => {
-      if (isDirtyRef.current && reactFlowInstance && diagram && !isLocked) {
+      if (isDirtyRef.current && reactFlowInstance && diagram && !isReadOnly) {
         const currentNodes = reactFlowInstance.getNodes()
         const currentEdges = reactFlowInstance.getEdges()
         // Clean and save
@@ -444,11 +458,11 @@ const DiagramEditorContent = ({
         }).catch(err => console.error('Failed to save on unmount:', err))
       }
     }
-  }, [diagram, isLocked, reactFlowInstance])
+  }, [diagram, isReadOnly, reactFlowInstance])
 
   // --- CONNECTION HANDLER ---
   const onConnect = useCallback((params) => {
-    if (isLocked) return
+    if (isReadOnly) return
 
     markDirty()
 
@@ -546,11 +560,11 @@ const DiagramEditorContent = ({
       }
       return addEdge(mergedParams, eds)
     })
-  }, [diagramType, connectionType, isLocked, getEdgeConfig, setEdges, setNodes, nodes, markDirty])
+  }, [diagramType, connectionType, isReadOnly, getEdgeConfig, setEdges, setNodes, nodes, markDirty])
 
   const onDrop = useCallback((event) => {
     event.preventDefault()
-    if (isLocked) return
+    if (isReadOnly) return
     const transferData = event.dataTransfer.getData('application/reactflow')
     if (!transferData) return
 
@@ -575,29 +589,29 @@ const DiagramEditorContent = ({
     
     markDirty()
     setNodes((nds) => nds.concat(newNode))
-  }, [isLocked, reactFlowInstance, setNodes, markDirty])
+  }, [isReadOnly, reactFlowInstance, setNodes, markDirty])
 
   const onDragOver = useCallback((e) => { 
     e.preventDefault()
-    e.dataTransfer.dropEffect = isLocked ? 'none' : 'move' 
-  }, [isLocked])
+    e.dataTransfer.dropEffect = isReadOnly ? 'none' : 'move' 
+  }, [isReadOnly])
 
   // Context Menu Handlers
   const handleNodeContextMenu = useCallback((event, node) => {
     event.preventDefault()
-    if (isLocked) return
+    if (isReadOnly) return
     setContextMenu({ type: 'node', x: event.clientX, y: event.clientY, data: node })
-  }, [isLocked])
+  }, [isReadOnly])
 
   const handleEdgeContextMenu = useCallback((event, edge) => {
     event.preventDefault()
-    if (isLocked) return
+    if (isReadOnly) return
     setContextMenu({ type: 'edge', x: event.clientX, y: event.clientY, data: edge })
-  }, [isLocked])
+  }, [isReadOnly])
 
   const handleNodeDoubleClick = useCallback((event, node) => {
     event.preventDefault()
-    if (isLocked) return
+    if (isReadOnly) return
     if (diagramType === 'erd' && isErdEntity(node)) {
       setAttributeModal({ isOpen: true, node })
     } else {
@@ -607,7 +621,7 @@ const DiagramEditorContent = ({
         setNodes((nds) => nds.map((n) => n.id === node.id ? { ...n, data: { ...n.data, label } } : n))
       }
     }
-  }, [diagramType, isLocked, setNodes, markDirty])
+  }, [diagramType, isReadOnly, setNodes, markDirty])
 
 
   // Handle link actions from context menu
@@ -727,7 +741,7 @@ const DiagramEditorContent = ({
   
   // Delete selected elements
   const handleDeleteSelected = useCallback(() => {
-    if (isLocked) return
+    if (isReadOnly) return
     const selectedNodes = reactFlowInstance.getNodes().filter(n => n.selected)
     const selectedEdges = reactFlowInstance.getEdges().filter(e => e.selected)
     
@@ -746,7 +760,7 @@ const DiagramEditorContent = ({
     
     setNodes(nds => nds.filter(n => !nodeIds.has(n.id)))
     setEdges(eds => eds.filter(e => !selectedEdges.some(se => se.id === e.id) && !nodeIds.has(e.source) && !nodeIds.has(e.target)))
-  }, [isLocked, reactFlowInstance, setNodes, setEdges, markDirty, elementLinksMap, deleteLinkMutation])
+  }, [isReadOnly, reactFlowInstance, setNodes, setEdges, markDirty, elementLinksMap, deleteLinkMutation])
 
   // Select all elements
   const handleSelectAll = useCallback(() => {
@@ -780,7 +794,7 @@ const DiagramEditorContent = ({
 
   // Paste elements
   const handlePaste = useCallback(() => {
-    if (isLocked) return
+    if (isReadOnly) return
     if (clipboardRef.current.nodes.length === 0) return
     
     const idMap = new Map()
@@ -822,11 +836,11 @@ const DiagramEditorContent = ({
     setEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges])
     
     toast.success(`Вставлено: ${newNodes.length}`)
-  }, [isLocked, setNodes, setEdges, markDirty])
+  }, [isReadOnly, setNodes, setEdges, markDirty])
 
   // Duplicate selected elements
   const handleDuplicate = useCallback(() => {
-    if (isLocked) return
+    if (isReadOnly) return
     
     const selectedNodes = reactFlowInstance.getNodes().filter(n => n.selected)
     const selectedEdges = reactFlowInstance.getEdges().filter(e => e.selected)
@@ -865,7 +879,7 @@ const DiagramEditorContent = ({
     setEdges(eds => [...eds.map(e => ({ ...e, selected: false })), ...newEdges])
     
     toast.success(`Дублировано: ${newNodes.length}`)
-  }, [isLocked, reactFlowInstance, setNodes, setEdges, markDirty])
+  }, [isReadOnly, reactFlowInstance, setNodes, setEdges, markDirty])
 
   // Zoom handlers
   const handleZoomIn = useCallback(() => {
@@ -1063,9 +1077,13 @@ const DiagramEditorContent = ({
         fitViewOptions={{ padding: 0.2 }}
         connectionMode={ConnectionMode.Loose}
         minZoom={0.1}
+        nodesDraggable={!isReadOnly}
+        nodesConnectable={!isReadOnly}
+        elementsSelectable={!isReadOnly}
+        connectOnClick={!isReadOnly}
       >
         <Controls showInteractive={false} />
-        <MiniMap nodeStrokeWidth={3} zoomable={!isLocked} pannable={!isLocked} />
+        <MiniMap nodeStrokeWidth={3} zoomable pannable />
         <Background variant="dots" gap={12} size={1} />
       </ReactFlow>
 
@@ -1511,6 +1529,7 @@ const DiagramEditor = (props) => {
   }
 
   const [showShortcutsFromHeader, setShowShortcutsFromHeader] = useState(false)
+  const isReadOnly = props.isLocked || props.isMobileViewOnly
 
   return (
     <div className="h-full flex flex-col">
@@ -1523,14 +1542,16 @@ const DiagramEditor = (props) => {
         </div>
         <div className="flex items-center gap-2">
           {/* Diagram actions */}
-          <button
-            onClick={props.onSaveAsTemplate}
-            className="btn btn-secondary btn-sm"
-            title="Сохранить как шаблон"
-          >
-            <Bookmark className="h-4 w-4 mr-1.5" />
-            Шаблон
-          </button>
+          {!props.isMobileViewOnly && (
+            <button
+              onClick={props.onSaveAsTemplate}
+              className="btn btn-secondary btn-sm"
+              title="Сохранить как шаблон"
+            >
+              <Bookmark className="h-4 w-4 mr-1.5" />
+              Шаблон
+            </button>
+          )}
           <button
             onClick={props.onExport}
             className="btn btn-secondary btn-sm"
@@ -1569,6 +1590,7 @@ const DiagramEditor = (props) => {
           <ReactFlowProvider>
             <DiagramEditorContent 
               {...props} 
+              isReadOnly={isReadOnly}
               nodes={nodes} 
               setNodes={setNodes} 
               onNodesChange={onNodesChange} 

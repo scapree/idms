@@ -11,7 +11,7 @@ import ImportModal from '../components/ImportModal'
 import DiagramTemplatesModal from '../components/DiagramTemplatesModal'
 import DiagramMap from '../components/DiagramMap'
 import { useAuth } from '../hooks/useAuth'
-import { ArrowLeft, Plus, FileText, Share2, Copy, X, LayoutTemplate, Map, Bookmark, Upload } from 'lucide-react'
+import { ArrowLeft, Plus, FileText, Share2, Copy, X, LayoutTemplate, Map, Bookmark, Upload, Smartphone } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const ProjectPage = () => {
@@ -36,9 +36,38 @@ const ProjectPage = () => {
   const [templateDescription, setTemplateDescription] = useState('')
   const [templateIsPublic, setTemplateIsPublic] = useState(false)
   const [highlightElementId, setHighlightElementId] = useState(null)
+  const [isMobileView, setIsMobileView] = useState(false)
   const { user } = useAuth()
   const heldLockRef = useRef(null)
   const diagramForceSaveRef = useRef(null)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+
+    const mediaQuery = window.matchMedia('(max-width: 1023px)')
+    const syncMobileState = () => setIsMobileView(mediaQuery.matches)
+    syncMobileState()
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', syncMobileState)
+      return () => mediaQuery.removeEventListener('change', syncMobileState)
+    }
+
+    mediaQuery.addListener(syncMobileState)
+    return () => mediaQuery.removeListener(syncMobileState)
+  }, [])
+
+  const isMobileViewOnly = isMobileView
+
+  useEffect(() => {
+    if (!isMobileViewOnly) return
+
+    // Mobile mode is strictly read-only; close any editing modals.
+    setShowCreateModal(false)
+    setShowTemplatesModal(false)
+    setShowSaveTemplateModal(false)
+    setShowImportModal(false)
+  }, [isMobileViewOnly])
 
   // Fetch project data
   const { data: project, isLoading: projectLoading } = useQuery(
@@ -150,6 +179,18 @@ const ProjectPage = () => {
     const diagramId = selectedDiagram?.id
     const userId = user?.id
 
+    if (isMobileViewOnly) {
+      const heldLock = heldLockRef.current
+      if (heldLock?.diagramId && heldLock?.userId) {
+        diagramsAPI.unlockDiagram(heldLock.diagramId).catch((error) => {
+          console.error('Failed to release diagram lock in mobile view', error)
+        })
+      }
+      heldLockRef.current = null
+      setDiagramLock(null)
+      return () => {}
+    }
+
     if (!diagramId || !userId) {
       setDiagramLock(null)
       return () => {}
@@ -206,9 +247,14 @@ const ProjectPage = () => {
         })
       }
     }
-  }, [selectedDiagram?.id, user?.id])
+  }, [selectedDiagram?.id, user?.id, isMobileViewOnly])
 
   const handleCreateDiagram = () => {
+    if (isMobileViewOnly) {
+      toast.error('На мобильных устройствах доступен только просмотр диаграмм')
+      return
+    }
+
     if (!newDiagramName.trim()) {
       toast.error('Введите название диаграммы')
       return
@@ -240,10 +286,20 @@ const ProjectPage = () => {
   }
 
   const handleCreateInvite = () => {
+    if (isMobileViewOnly) {
+      toast.error('На мобильных устройствах доступен только просмотр диаграмм')
+      return
+    }
+
     createInviteMutation.mutate()
   }
 
   const handleSaveAsTemplate = () => {
+    if (isMobileViewOnly) {
+      toast.error('На мобильных устройствах доступен только просмотр диаграмм')
+      return
+    }
+
     if (!templateName.trim()) {
       toast.error('Введите название шаблона')
       return
@@ -260,6 +316,11 @@ const ProjectPage = () => {
   }
 
   const openSaveTemplateModal = () => {
+    if (isMobileViewOnly) {
+      toast.error('На мобильных устройствах доступен только просмотр диаграмм')
+      return
+    }
+
     if (selectedDiagram) {
       setTemplateName(`${selectedDiagram.name} (шаблон)`)
       setTemplateDescription(selectedDiagram.description || '')
@@ -269,6 +330,11 @@ const ProjectPage = () => {
 
   // Handle import from file
   const handleImport = (importedData) => {
+    if (isMobileViewOnly) {
+      toast.error('На мобильных устройствах доступен только просмотр диаграмм')
+      return
+    }
+
     // Create a new diagram with imported data
     createDiagramMutation.mutate({
       name: importedData.name,
@@ -417,14 +483,6 @@ const ProjectPage = () => {
             </span>
           )}
           <button
-            onClick={() => setShowImportModal(true)}
-            className="btn btn-secondary btn-sm"
-            title="Импорт диаграммы"
-          >
-            <Upload className="h-4 w-4 mr-1" />
-            Импорт
-          </button>
-          <button
             onClick={() => setShowDiagramMap(true)}
             className="btn btn-secondary btn-sm"
             title="Карта связей между диаграммами"
@@ -432,93 +490,174 @@ const ProjectPage = () => {
             <Map className="h-4 w-4 mr-1" />
             Карта связей
           </button>
-          <button
-            onClick={handleCreateInvite}
-            disabled={createInviteMutation.isLoading}
-            className="btn btn-secondary btn-sm"
-          >
-            <Share2 className="h-4 w-4 mr-1" />
-            Поделиться
-          </button>
-          <button
-            onClick={() => setShowTemplatesModal(true)}
-            className="btn btn-secondary btn-sm"
-          >
-            <LayoutTemplate className="h-4 w-4 mr-1" />
-            Шаблоны
-          </button>
-          <button
-            onClick={() => {
-              setPendingTemplate(null)
-              setNewDiagramName('')
-              setShowCreateModal(true)
-            }}
-            className="btn btn-primary btn-sm"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Новая диаграмма
-          </button>
+          {isMobileViewOnly ? (
+            <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200">
+              <Smartphone className="h-3.5 w-3.5" />
+              Только просмотр
+            </span>
+          ) : (
+            <>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="btn btn-secondary btn-sm"
+                title="Импорт диаграммы"
+              >
+                <Upload className="h-4 w-4 mr-1" />
+                Импорт
+              </button>
+              <button
+                onClick={handleCreateInvite}
+                disabled={createInviteMutation.isLoading}
+                className="btn btn-secondary btn-sm"
+              >
+                <Share2 className="h-4 w-4 mr-1" />
+                Поделиться
+              </button>
+              <button
+                onClick={() => setShowTemplatesModal(true)}
+                className="btn btn-secondary btn-sm"
+              >
+                <LayoutTemplate className="h-4 w-4 mr-1" />
+                Шаблоны
+              </button>
+              <button
+                onClick={() => {
+                  setPendingTemplate(null)
+                  setNewDiagramName('')
+                  setShowCreateModal(true)
+                }}
+                className="btn btn-primary btn-sm"
+              >
+                <Plus className="h-4 w-4 mr-1" />
+                Новая диаграмма
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Panel - Diagram Tree */}
-        <div className="w-72 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
-          <div className="px-4 py-3 border-b border-gray-200 flex-shrink-0">
-            <h2 className="text-sm font-semibold text-gray-900">Диаграммы</h2>
-          </div>
-          <div className="flex-1 overflow-y-auto">
-            <DiagramTree
-              diagrams={diagrams}
-              selectedDiagram={selectedDiagram}
-              onSelectDiagram={handleSelectDiagram}
-              onDiagramDeleted={() => setSelectedDiagram(null)}
-            />
-          </div>
-        </div>
+      <div className={`flex-1 ${isMobileViewOnly ? 'flex flex-col overflow-hidden' : 'flex overflow-hidden'}`}>
+        {isMobileViewOnly ? (
+          <>
+            <div className="px-4 py-3 bg-white border-b border-gray-200 flex-shrink-0">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                Диаграмма
+              </label>
+              <select
+                value={selectedDiagram?.id ?? ''}
+                onChange={async (e) => {
+                  const selectedId = Number(e.target.value)
+                  const diagram = diagrams.find((item) => item.id === selectedId)
+                  if (diagram) {
+                    await handleSelectDiagram(diagram)
+                  }
+                }}
+                className="input text-sm"
+              >
+                <option value="">Выберите диаграмму</option>
+                {diagrams.map((diagram) => (
+                  <option key={diagram.id} value={diagram.id}>
+                    {diagram.name} ({diagram.diagram_type?.toUpperCase()})
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        {/* Center Panel - Diagram Editor */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {selectedDiagram ? (
-            <DiagramEditor
-              key={`${selectedDiagram.id}-${selectedDiagram.updated_at || ''}`}
-              diagram={selectedDiagram}
-              diagramType={selectedDiagram.diagram_type}
-              isLocked={isDiagramLockedForEditing}
-              lockUser={lockOwnerLabel}
-              connectionType={connectionType}
-              setForceSaveRef={(fn) => { diagramForceSaveRef.current = fn }}
-              onNavigateToDiagram={handleNavigateToDiagram}
-              highlightElementId={highlightElementId}
-              onHighlightClear={() => setHighlightElementId(null)}
-              onSaveAsTemplate={openSaveTemplateModal}
-              onExport={() => setShowExportModal(true)}
-              onImport={() => setShowImportModal(true)}
-            />
-          ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-50">
-              <div className="text-center">
-                <FileText className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">
-                  Диаграмма не выбрана
-                </h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Выберите диаграмму слева или создайте новую.
-                </p>
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {selectedDiagram ? (
+                <DiagramEditor
+                  key={`${selectedDiagram.id}-${selectedDiagram.updated_at || ''}`}
+                  diagram={selectedDiagram}
+                  diagramType={selectedDiagram.diagram_type}
+                  isLocked={isDiagramLockedForEditing || isMobileViewOnly}
+                  lockUser={lockOwnerLabel}
+                  connectionType={connectionType}
+                  setForceSaveRef={(fn) => { diagramForceSaveRef.current = fn }}
+                  onNavigateToDiagram={handleNavigateToDiagram}
+                  highlightElementId={highlightElementId}
+                  onHighlightClear={() => setHighlightElementId(null)}
+                  onSaveAsTemplate={openSaveTemplateModal}
+                  onExport={() => setShowExportModal(true)}
+                  onImport={() => setShowImportModal(true)}
+                  isMobileViewOnly={isMobileViewOnly}
+                />
+              ) : (
+                <div className="flex-1 flex items-center justify-center bg-gray-50">
+                  <div className="text-center px-6">
+                    <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">
+                      Диаграмма не выбрана
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Выберите диаграмму в списке выше для просмотра.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Left Panel - Diagram Tree */}
+            <div className="w-72 bg-white border-r border-gray-200 flex flex-col flex-shrink-0">
+              <div className="px-4 py-3 border-b border-gray-200 flex-shrink-0">
+                <h2 className="text-sm font-semibold text-gray-900">Диаграммы</h2>
+              </div>
+              <div className="flex-1 overflow-y-auto">
+                <DiagramTree
+                  diagrams={diagrams}
+                  selectedDiagram={selectedDiagram}
+                  onSelectDiagram={handleSelectDiagram}
+                  onDiagramDeleted={() => setSelectedDiagram(null)}
+                />
               </div>
             </div>
-          )}
-        </div>
 
-        {/* Right Panel - Palette */}
-        <div className="w-72 bg-white border-l border-gray-200 flex-shrink-0 overflow-hidden">
-          <DiagramPalette
-            diagramType={selectedDiagram?.diagram_type || 'bpmn'}
-            selectedConnectionType={connectionType}
-            onConnectionTypeChange={setConnectionType}
-          />
-        </div>
+            {/* Center Panel - Diagram Editor */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              {selectedDiagram ? (
+                <DiagramEditor
+                  key={`${selectedDiagram.id}-${selectedDiagram.updated_at || ''}`}
+                  diagram={selectedDiagram}
+                  diagramType={selectedDiagram.diagram_type}
+                  isLocked={isDiagramLockedForEditing || isMobileViewOnly}
+                  lockUser={lockOwnerLabel}
+                  connectionType={connectionType}
+                  setForceSaveRef={(fn) => { diagramForceSaveRef.current = fn }}
+                  onNavigateToDiagram={handleNavigateToDiagram}
+                  highlightElementId={highlightElementId}
+                  onHighlightClear={() => setHighlightElementId(null)}
+                  onSaveAsTemplate={openSaveTemplateModal}
+                  onExport={() => setShowExportModal(true)}
+                  onImport={() => setShowImportModal(true)}
+                  isMobileViewOnly={isMobileViewOnly}
+                />
+              ) : (
+                <div className="flex-1 flex items-center justify-center bg-gray-50">
+                  <div className="text-center">
+                    <FileText className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">
+                      Диаграмма не выбрана
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Выберите диаграмму слева или создайте новую.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Right Panel - Palette */}
+            <div className="w-72 bg-white border-l border-gray-200 flex-shrink-0 overflow-hidden">
+              <DiagramPalette
+                diagramType={selectedDiagram?.diagram_type || 'bpmn'}
+                selectedConnectionType={connectionType}
+                onConnectionTypeChange={setConnectionType}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Create Diagram Modal */}
