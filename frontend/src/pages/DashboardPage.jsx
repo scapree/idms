@@ -112,17 +112,18 @@ const DashboardPage = () => {
     <Layout>
       <div className="h-full flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex justify-between items-center flex-shrink-0 mb-5">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Мои проекты</h1>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 flex-shrink-0 mb-4 sm:mb-5">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-gray-900 truncate">Мои проекты</h1>
             <p className="text-sm text-gray-500 mt-0.5">Управление проектами диаграмм</p>
           </div>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="btn btn-primary btn-md"
+            className="btn btn-primary btn-md w-full sm:w-auto"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Новый проект
+            <span className="max-[430px]:hidden">Новый проект</span>
+            <span className="hidden max-[430px]:inline">Новый</span>
           </button>
         </div>
 
@@ -146,15 +147,15 @@ const DashboardPage = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pb-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5 pb-6">
               {projects.map((project) => (
                 <div key={project.id} className="card hover:border-gray-300 transition-colors">
                   <div className="card-header">
-                    <div className="flex items-start justify-between">
-                      <h3 className="text-base font-semibold text-gray-900">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-base font-semibold text-gray-900 truncate min-w-0">
                         {project.name}
                       </h3>
-                      <div className="flex space-x-1">
+                      <div className="flex space-x-1 flex-shrink-0">
                         <button
                           onClick={() => handleEdit(project)}
                           className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
@@ -182,13 +183,13 @@ const DashboardPage = () => {
                     )}
                   </div>
                   <div className="card-content">
-                    <div className="flex justify-between items-center">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
                       <span className="text-xs text-gray-400">
                         {new Date(project.created_at).toLocaleDateString()}
                       </span>
                       <button
                         onClick={() => navigate(`/project/${project.id}`)}
-                        className="btn btn-primary btn-sm"
+                        className="btn btn-primary btn-sm w-full sm:w-auto justify-center"
                       >
                         <Eye className="h-4 w-4 mr-1" />
                         Открыть

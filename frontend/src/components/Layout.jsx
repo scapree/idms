@@ -145,35 +145,35 @@ const Layout = ({ children }) => {
 
       {/* Header */}
       <header className="bg-white border-b border-gray-200 flex-shrink-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-14">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between min-h-14 py-2 gap-2">
             <div className="flex items-center">
               <h1 className="text-lg font-bold text-gray-900 tracking-tight">IDMS</h1>
             </div>
             
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-1.5 flex-wrap justify-end">
               <button
                 onClick={() => setShowAbout(true)}
-                className="flex items-center space-x-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded transition-colors"
                 title="О проекте"
               >
                 <Info className="h-4 w-4" />
-                <span>О проекте</span>
+                <span className="max-[430px]:hidden">О проекте</span>
               </button>
               
-              <div className="w-px h-6 bg-gray-200 mx-1"></div>
+              <div className="w-px h-6 bg-gray-200 mx-1 max-[430px]:hidden"></div>
               
-              <div className="flex items-center space-x-2 px-3 py-1.5 bg-gray-50 rounded">
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-50 rounded max-w-[180px]">
                 <User className="h-4 w-4 text-gray-500" />
-                <span className="text-sm text-gray-700 font-medium">{user?.username}</span>
+                <span className="text-sm text-gray-700 font-medium truncate">{user?.username}</span>
               </div>
               
               <button
                 onClick={logout}
-                className="flex items-center space-x-1.5 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
               >
                 <LogOut className="h-4 w-4" />
-                <span>Выйти</span>
+                <span className="max-[430px]:hidden">Выйти</span>
               </button>
             </div>
           </div>
@@ -182,7 +182,7 @@ const Layout = ({ children }) => {
 
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
-        <div className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="h-full max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
           {children}
         </div>
       </main>
