@@ -456,25 +456,25 @@ const ProjectPage = () => {
   return (
     <div className="h-full flex flex-col overflow-hidden bg-gray-50">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 flex-shrink-0">
-        <div className="flex items-center space-x-4">
+      <div className={`px-4 py-3 bg-white border-b border-gray-200 flex-shrink-0 ${isMobileViewOnly ? 'flex flex-col gap-2' : 'flex items-center justify-between'}`}>
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => navigate('/dashboard')}
             className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
           </button>
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold text-gray-900 truncate">
               {project?.name}
             </h1>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 truncate">
               {diagrams.length} {diagrams.length === 1 ? 'диаграмма' : diagrams.length < 5 ? 'диаграммы' : 'диаграмм'}
             </p>
           </div>
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className={`flex items-center gap-2 ${isMobileViewOnly ? 'flex-wrap' : ''}`}>
           {selectedDiagram && diagramLock && (
             <span
               className={`text-xs px-2 py-1 rounded ${lockedByCurrentUser ? 'bg-gray-100 text-gray-600' : 'bg-red-50 text-red-600'}`}
@@ -488,7 +488,7 @@ const ProjectPage = () => {
             title="Карта связей между диаграммами"
           >
             <Map className="h-4 w-4 mr-1" />
-            Карта связей
+            <span className="max-[430px]:hidden">Карта связей</span>
           </button>
           {isMobileViewOnly ? (
             <span className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded bg-amber-50 text-amber-700 border border-amber-200">
@@ -584,7 +584,7 @@ const ProjectPage = () => {
                 />
               ) : (
                 <div className="flex-1 flex items-center justify-center bg-gray-50">
-                  <div className="text-center px-6">
+                  <div className="text-center px-4">
                     <FileText className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-sm font-medium text-gray-900">
                       Диаграмма не выбрана

@@ -141,7 +141,7 @@ const DiagramEditorContent = ({
   diagram, diagramType, isLocked, connectionType, 
   nodes, setNodes, onNodesChange, edges, setEdges, onEdgesChange,
   onDataChange, initialDataRef, setForceSaveRef, onNavigateToDiagram,
-  highlightElementId, isReadOnly
+  highlightElementId, isReadOnly, isMobileViewOnly
 }) => {
   const reactFlowInstance = useReactFlow()
   const queryClient = useQueryClient()
@@ -1358,14 +1358,14 @@ const DiagramEditorContent = ({
       />
 
       {/* Save Status Indicator */}
-      <div className="absolute bottom-4 right-4 z-10">
+      <div className={`absolute z-10 ${isMobileViewOnly ? 'bottom-2 right-2' : 'bottom-4 right-4'}`}>
         {isSaving ? (
-          <div className="flex items-center gap-2 bg-white border border-gray-200 px-3 py-1.5 rounded text-sm text-gray-600">
+          <div className={`flex items-center gap-2 bg-white border border-gray-200 rounded text-gray-600 ${isMobileViewOnly ? 'px-2 py-1 text-xs max-w-[calc(100vw-1rem)]' : 'px-3 py-1.5 text-sm'}`}>
             <Save className="w-4 h-4 animate-pulse" />
             Сохранение...
           </div>
         ) : lastSaved ? (
-          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded text-sm text-emerald-700">
+          <div className={`flex items-center gap-2 bg-emerald-50 border border-emerald-200 rounded text-emerald-700 ${isMobileViewOnly ? 'px-2 py-1 text-xs max-w-[calc(100vw-1rem)]' : 'px-3 py-1.5 text-sm'}`}>
             <CheckCircle2 className="w-4 h-4" />
             Сохранено
           </div>
@@ -1389,7 +1389,7 @@ const DiagramEditorContent = ({
 
       {/* Incoming Links Panel */}
       {(diagramLinks?.incoming?.length ?? 0) > 0 && (
-        <div className="absolute top-4 left-4 z-10 max-w-xs">
+        <div className={`absolute z-10 ${isMobileViewOnly ? 'top-2 left-2 right-2 max-w-none' : 'top-4 left-4 max-w-xs'}`}>
           <div className="bg-white rounded border border-gray-200 overflow-hidden">
             <div className="px-3 py-2 bg-primary-50 border-b border-primary-100 text-primary-700 text-xs font-medium flex items-center gap-2">
               <ExternalLink className="w-3 h-3" />
@@ -1444,7 +1444,7 @@ const DiagramEditorContent = ({
             })))
           }
         }}
-        className="absolute top-4 right-4 z-10 max-w-md"
+        className={isMobileViewOnly ? 'absolute bottom-2 left-2 right-2 z-10 max-w-none' : 'absolute top-4 right-4 z-10 max-w-md'}
       />
     </>
   )
@@ -1533,14 +1533,14 @@ const DiagramEditor = (props) => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex items-center justify-between px-4 py-2.5 bg-white border-b border-gray-200">
-        <div className="flex items-center gap-3">
-          <h2 className="text-base font-semibold text-gray-900">{props.diagram?.name || 'Без названия'}</h2>
+      <div className={`px-4 py-2.5 bg-white border-b border-gray-200 ${props.isMobileViewOnly ? 'flex flex-col gap-2' : 'flex items-center justify-between'}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <h2 className="text-base font-semibold text-gray-900 truncate">{props.diagram?.name || 'Без названия'}</h2>
           <span className="badge badge-secondary font-mono uppercase">
             {props.diagram?.diagram_type}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${props.isMobileViewOnly ? 'justify-end' : ''}`}>
           {/* Diagram actions */}
           {!props.isMobileViewOnly && (
             <button
@@ -1557,10 +1557,10 @@ const DiagramEditor = (props) => {
             className="btn btn-secondary btn-sm"
             title="Экспорт диаграммы"
           >
-            <Download className="h-4 w-4 mr-1.5" />
-            Экспорт
+            <Download className={`h-4 w-4 ${props.isMobileViewOnly ? '' : 'mr-1.5'}`} />
+            {!props.isMobileViewOnly && 'Экспорт'}
           </button>
-          <div className="w-px h-6 bg-gray-200 mx-1"></div>
+          {!props.isMobileViewOnly && <div className="w-px h-6 bg-gray-200 mx-1"></div>}
           {/* Help button */}
           <button
             onClick={() => setShowShortcutsFromHeader(true)}
@@ -1591,6 +1591,7 @@ const DiagramEditor = (props) => {
             <DiagramEditorContent 
               {...props} 
               isReadOnly={isReadOnly}
+              isMobileViewOnly={props.isMobileViewOnly}
               nodes={nodes} 
               setNodes={setNodes} 
               onNodesChange={onNodesChange} 
