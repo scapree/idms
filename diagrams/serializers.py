@@ -27,9 +27,14 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(serializers.ModelSerializer):
+    is_guest = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ['id', 'username', 'email']
+        fields = ['id', 'username', 'email', 'is_guest']
+
+    def get_is_guest(self, obj):
+        return hasattr(obj, 'guest_profile')
 
 
 class ProjectSerializer(serializers.ModelSerializer):

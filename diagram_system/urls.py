@@ -28,6 +28,7 @@ from diagrams.views import (
     DiagramTemplateDetailView,
     DiagramTemplateListView,
     ElementLinksView,
+    guest_login,
     InviteInfoView,
     obtain_token,
     ProjectApiView,
@@ -48,11 +49,13 @@ urlpatterns = [
     # Auth
     path('api/auth/register', register_user, name='register'),
     path('api/auth/token', obtain_token, name='token'),
+    path('api/auth/guest', guest_login, name='guest_login'),
     path('api/auth/me', CurrentUserView.as_view(), name='current_user'),
 
     # Legacy aliases (no /api prefix) for backward compatibility
     path('auth/register', register_user, name='legacy_register'),
     path('auth/token', obtain_token, name='legacy_token'),
+    path('auth/guest', guest_login, name='legacy_guest_login'),
     path('auth/me', CurrentUserView.as_view(), name='legacy_current_user'),
 
     # Projects

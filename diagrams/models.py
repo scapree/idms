@@ -141,6 +141,15 @@ class DiagramLink(models.Model):
         return f'{self.source_diagram.name}:{self.source_element_id} → {self.target_diagram.name}'
 
 
+class GuestProfile(models.Model):
+    """Marks a user as a temporary guest. Guest users are cleaned up periodically."""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='guest_profile')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'Guest: {self.user.username}'
+
+
 class DiagramTemplate(models.Model):
     """
     User-created diagram templates.

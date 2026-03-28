@@ -2,13 +2,14 @@ import React, { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { useAuth } from '../hooks/useAuth.jsx'
-import { Eye, EyeOff, LogIn } from 'lucide-react'
+import { Eye, EyeOff, LogIn, UserRound } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const { login } = useAuth()
+  const [isGuestLoading, setIsGuestLoading] = useState(false)
+  const { login, loginAsGuest } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   
@@ -25,9 +26,21 @@ const LoginPage = () => {
     
     if (result.success) {
       toast.success('Вход выполнен успешно!')
-      // Redirect to the page they tried to access, or dashboard
       const from = location.state?.from || '/dashboard'
       navigate(from)
+    } else {
+      toast.error(result.error)
+    }
+  }
+
+  const handleGuestLogin = async () => {
+    setIsGuestLoading(true)
+    const result = await loginAsGuest()
+    setIsGuestLoading(false)
+
+    if (result.success) {
+      toast.success('Вы вошли как гость')
+      navigate('/dashboard')
     } else {
       toast.error(result.error)
     }
@@ -98,7 +111,7 @@ const LoginPage = () => {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || isGuestLoading}
               className="btn btn-primary btn-md w-full mt-2"
             >
               {isLoading ? (
@@ -111,6 +124,32 @@ const LoginPage = () => {
               )}
             </button>
           </form>
+
+          <div className="mt-4">
+            <div className="relative flex items-center">
+              <div className="flex-grow border-t border-gray-200" />
+              <span className="mx-3 text-xs text-gray-400 whitespace-nowrap">или</span>
+              <div className="flex-grow border-t border-gray-200" />
+            </div>
+            <button
+              type="button"
+              onClick={handleGuestLogin}
+              disabled={isLoading || isGuestLoading}
+              className="btn btn-md w-full mt-4 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200"
+            >
+              {isGuestLoading ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-500 border-t-transparent"></div>
+              ) : (
+                <>
+                  <UserRound className="h-4 w-4 mr-2" />
+                  Войти как гость
+                </>
+              )}
+            </button>
+            <p className="mt-2 text-center text-xs text-gray-400">
+              Данные сохраняются до закрытия вкладки
+            </p>
+          </div>
         </div>
       </div>
     </div>

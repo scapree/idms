@@ -14,6 +14,11 @@ export const authAPI = {
     return response.data
   },
 
+  loginAsGuest: async () => {
+    const response = await apiClient.post('/auth/guest')
+    return response.data
+  },
+
   register: async (userData) => {
     const response = await apiClient.post('/auth/register', userData)
     return response.data

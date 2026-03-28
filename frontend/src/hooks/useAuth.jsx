@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react'
 import { authAPI } from '../api/auth'
+import { clearStoredToken, getStoredToken } from '../api/client'
 
 const AuthContext = createContext()
 
@@ -17,13 +18,13 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const initAuth = async () => {
-      const token = localStorage.getItem('access_token')
+      const token = getStoredToken()
       if (token) {
         try {
           const userData = await authAPI.getCurrentUser()
           setUser(userData)
         } catch (error) {
-          localStorage.removeItem('access_token')
+          clearStoredToken()
         }
       }
       setIsLoading(false)
@@ -38,7 +39,6 @@ export const AuthProvider = ({ children }) => {
     if (typeof errorDetail === 'string') {
       return errorDetail
     } else if (Array.isArray(errorDetail)) {
-      // Pydantic v2 validation errors format
       return errorDetail.map(err => err.msg || err.message).join(', ')
     } else if (errorDetail && typeof errorDetail === 'object') {
       return errorDetail.msg || errorDetail.message || 'An error occurred'
@@ -62,6 +62,22 @@ export const AuthProvider = ({ children }) => {
     }
   }
 
+  const loginAsGuest = async () => {
+    try {
+      const response = await authAPI.loginAsGuest()
+      // Store guest token in sessionStorage so it clears when the tab is closed
+      sessionStorage.setItem('access_token', response.access_token)
+      const userData = await authAPI.getCurrentUser()
+      setUser(userData)
+      return { success: true }
+    } catch (error) {
+      return {
+        success: false,
+        error: formatErrorMessage(error) || 'Не удалось войти как гость',
+      }
+    }
+  }
+
   const register = async (userData) => {
     try {
       await authAPI.register(userData)
@@ -75,7 +91,7 @@ export const AuthProvider = ({ children }) => {
   }
 
   const logout = () => {
-    localStorage.removeItem('access_token')
+    clearStoredToken()
     setUser(null)
   }
 
@@ -83,6 +99,7 @@ export const AuthProvider = ({ children }) => {
     user,
     isLoading,
     login,
+    loginAsGuest,
     register,
     logout,
   }

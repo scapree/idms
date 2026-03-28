@@ -1,7 +1,9 @@
 from datetime import timedelta
 import json
+import uuid
 
 from django.contrib.auth import authenticate
+from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 
@@ -13,7 +15,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import Diagram, DiagramLink, DiagramTemplate, Project, ProjectInvite, ProjectMembership
+from .models import Diagram, DiagramLink, DiagramTemplate, GuestProfile, Project, ProjectInvite, ProjectMembership
 from .serializers import (
     DiagramLinkCreateSerializer,
     DiagramLinkSerializer,
@@ -97,6 +99,33 @@ def obtain_token(request):
             "token_type": "Bearer",
         },
         status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def guest_login(request):
+    # Clean up guest users older than 24 hours
+    cutoff = timezone.now() - timedelta(hours=24)
+    old_guest_ids = GuestProfile.objects.filter(created_at__lt=cutoff).values_list('user_id', flat=True)
+    User.objects.filter(id__in=list(old_guest_ids)).delete()
+
+    # Create a new guest user
+    unique_suffix = uuid.uuid4().hex[:10]
+    username = f'guest_{unique_suffix}'
+    user = User.objects.create_user(username=username)
+    user.set_unusable_password()
+    user.save(update_fields=['password'])
+    GuestProfile.objects.create(user=user)
+
+    token, _ = Token.objects.get_or_create(user=user)
+    return Response(
+        {
+            "access_token": token.key,
+            "token_type": "Bearer",
+            "is_guest": True,
+        },
+        status=status.HTTP_201_CREATED,
     )
 
 
